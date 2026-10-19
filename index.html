@@ -37,45 +37,55 @@
   <div class="max-w-[1650px] mx-auto space-y-3">
 
     <!-- Top Navigation & Controls Bar -->
-    <header class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+    <header class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 flex flex-wrap items-center justify-between gap-3 shadow-sm">
       
-      <!-- Brand & Market Indices / Commodities Ticker -->
+      <!-- Brand & Stacked 2-Line Market Tickers -->
       <div class="flex flex-wrap items-center gap-2">
         <h1 class="font-extrabold text-base tracking-tight mr-1">Portfolio</h1>
 
         <!-- NIFTY 50 -->
-        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
-          <span class="text-slate-500 font-medium">NIFTY:</span>
-          <strong id="idx-nifty-ltp" class="text-slate-800 dark:text-slate-200 font-mono">--</strong>
-          <span id="idx-nifty-chg" class="font-mono text-[11px] font-bold">--</span>
+        <div class="flex flex-col justify-center px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 leading-tight">
+          <div class="text-[11px] font-medium text-slate-500 flex items-center justify-between gap-1.5">
+            <span>NIFTY:</span>
+            <strong id="idx-nifty-ltp" class="text-slate-900 dark:text-slate-100 font-mono font-bold">--</strong>
+          </div>
+          <div id="idx-nifty-chg" class="font-mono text-[10px] font-bold text-right mt-0.5">--</div>
         </div>
 
         <!-- BANK NIFTY -->
-        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
-          <span class="text-slate-500 font-medium">BANK NIFTY:</span>
-          <strong id="idx-banknifty-ltp" class="text-slate-800 dark:text-slate-200 font-mono">--</strong>
-          <span id="idx-banknifty-chg" class="font-mono text-[11px] font-bold">--</span>
+        <div class="flex flex-col justify-center px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 leading-tight">
+          <div class="text-[11px] font-medium text-slate-500 flex items-center justify-between gap-1.5">
+            <span>BANK NIFTY:</span>
+            <strong id="idx-banknifty-ltp" class="text-slate-900 dark:text-slate-100 font-mono font-bold">--</strong>
+          </div>
+          <div id="idx-banknifty-chg" class="font-mono text-[10px] font-bold text-right mt-0.5">--</div>
         </div>
 
         <!-- NIFTY MIDCAP 50 -->
-        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
-          <span class="text-slate-500 font-medium">MIDCAP:</span>
-          <strong id="idx-midcap-ltp" class="text-slate-800 dark:text-slate-200 font-mono">--</strong>
-          <span id="idx-midcap-chg" class="font-mono text-[11px] font-bold">--</span>
+        <div class="flex flex-col justify-center px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 leading-tight">
+          <div class="text-[11px] font-medium text-slate-500 flex items-center justify-between gap-1.5">
+            <span>MIDCAP:</span>
+            <strong id="idx-midcap-ltp" class="text-slate-900 dark:text-slate-100 font-mono font-bold">--</strong>
+          </div>
+          <div id="idx-midcap-chg" class="font-mono text-[10px] font-bold text-right mt-0.5">--</div>
         </div>
 
-        <!-- GOLD (10g in INR) -->
-        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
-          <span class="text-slate-500 font-medium">GOLD (10g):</span>
-          <strong id="idx-gold-ltp" class="text-slate-800 dark:text-slate-200 font-mono">--</strong>
-          <span id="idx-gold-chg" class="font-mono text-[11px] font-bold">--</span>
+        <!-- GOLD (10g) -->
+        <div class="flex flex-col justify-center px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 leading-tight">
+          <div class="text-[11px] font-medium text-slate-500 flex items-center justify-between gap-1.5">
+            <span>GOLD (10g):</span>
+            <strong id="idx-gold-ltp" class="text-slate-900 dark:text-slate-100 font-mono font-bold">--</strong>
+          </div>
+          <div id="idx-gold-chg" class="font-mono text-[10px] font-bold text-right mt-0.5">--</div>
         </div>
 
-        <!-- SILVER (1kg in INR) -->
-        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
-          <span class="text-slate-500 font-medium">SILVER (1kg):</span>
-          <strong id="idx-silver-ltp" class="text-slate-800 dark:text-slate-200 font-mono">--</strong>
-          <span id="idx-silver-chg" class="font-mono text-[11px] font-bold">--</span>
+        <!-- SILVER (1kg) -->
+        <div class="flex flex-col justify-center px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 leading-tight">
+          <div class="text-[11px] font-medium text-slate-500 flex items-center justify-between gap-1.5">
+            <span>SILVER (1kg):</span>
+            <strong id="idx-silver-ltp" class="text-slate-900 dark:text-slate-100 font-mono font-bold">--</strong>
+          </div>
+          <div id="idx-silver-chg" class="font-mono text-[10px] font-bold text-right mt-0.5">--</div>
         </div>
       </div>
 
@@ -313,7 +323,7 @@
       }
     }
 
-    // Update Header Indices/Commodity Widget with INR formatting + absolute diff + percentage
+    // Update Header Indices/Commodity Widget with Stacked 2-Line Layout
     function updateTickerBadge(prefix, quote) {
       if (!quote || quote.ltp === undefined) return;
       const ltp = quote.ltp;
@@ -332,7 +342,7 @@
       if (chgElem) {
         const sign = isPos ? "+" : "";
         chgElem.innerText = `${sign}${diff.toFixed(2)} (${sign}${pct.toFixed(2)}%)`;
-        chgElem.className = `font-mono text-[11px] font-bold ${isPos ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`;
+        chgElem.className = `font-mono text-[10px] font-bold text-right mt-0.5 ${isPos ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`;
       }
     }
 
@@ -410,7 +420,6 @@
       const indicator = document.getElementById("refresh-indicator");
       indicator.className = "w-2 h-2 rounded-full bg-emerald-500 animate-ping";
 
-      // Refresh Top Bar Macro Tickers in parallel
       refreshMacroTickers();
 
       try {
@@ -461,7 +470,6 @@
 
     // Render Data to Table and Cards
     function renderDashboard() {
-      // 1. Sort computed data
       computedData.sort((a, b) => {
         let valA = a[currentSortCol];
         let valB = b[currentSortCol];
@@ -472,7 +480,6 @@
         return currentSortAsc ? valA - valB : valB - valA;
       });
 
-      // 2. Render sorting arrow icons on headers
       const sortHeaders = ['symbol', 'bq', 'price', 'buyValue', 'ltp', 'currValue', 'totalDiff', 'todayPct', 'from52Pct'];
       sortHeaders.forEach(col => {
         const span = document.getElementById(`sort-${col}`);
@@ -501,7 +508,6 @@
           ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40" 
           : "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40";
 
-        // Desktop Row (Comfortable 13px font)
         desktopHtml += `
           <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
             <td class="py-2.5 px-3 text-slate-400 text-xs">${i + 1}</td>
@@ -530,7 +536,6 @@
           </tr>
         `;
 
-        // Mobile Card (Demat/Kite layout)
         mobileHtml += `
           <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-sm space-y-1.5">
             <div class="flex items-center justify-between text-xs">
@@ -603,7 +608,6 @@
       const totalColor = totalPnl >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400';
       const todayColor = todayPnl >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400';
 
-      // Desktop Side Panel
       document.getElementById("kpi-invested").innerText = fmtInr(invested);
       document.getElementById("kpi-current").innerText = fmtInr(current);
 
@@ -621,7 +625,6 @@
 
       document.getElementById("kpi-prev-close").innerText = `Prev: ${fmtInr(prevClose)}`;
 
-      // Mobile Summary Row
       document.getElementById("m-kpi-invested").innerText = fmtInr(invested);
       document.getElementById("m-kpi-current").innerText = fmtInr(current);
 
