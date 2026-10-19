@@ -1,73 +1,108 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Personal Stock Portfolio Tracker</title>
+  <title>Stock Portfolio Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen p-4 sm:p-6 font-sans">
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen p-4 sm:p-6 font-sans transition-colors duration-200">
   <div class="max-w-7xl mx-auto space-y-6">
 
-    <!-- KPI Summary Header -->
-    <header class="grid grid-cols-2 md:grid-cols-5 gap-4 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
-      <div>
-        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Invested</span>
-        <div id="kpi-invested" class="text-xl sm:text-2xl font-bold text-white mt-1">₹0.00</div>
+    <!-- Top Navigation & Controls Bar -->
+    <div class="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+      <div class="flex items-center gap-3">
+        <h1 class="text-lg font-bold tracking-tight">Portfolio Tracker</h1>
+        <span class="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
+          NIFTY 50: <strong id="idx-nifty" class="text-slate-900 dark:text-slate-200">--</strong>
+        </span>
       </div>
-      <div>
-        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Current Value</span>
-        <div id="kpi-current" class="text-xl sm:text-2xl font-bold text-white mt-1">₹0.00</div>
-      </div>
-      <div>
-        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total P&L</span>
-        <div id="kpi-total-pnl" class="text-xl sm:text-2xl font-bold text-slate-300 mt-1">₹0.00</div>
-        <div id="kpi-total-pct" class="text-xs font-medium text-slate-400">0.00%</div>
-      </div>
-      <div>
-        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Today's P&L</span>
-        <div id="kpi-today-pnl" class="text-xl sm:text-2xl font-bold text-slate-300 mt-1">₹0.00</div>
-        <div id="kpi-prev-close" class="text-xs text-slate-500">Prev Close Total: ₹0.00</div>
-      </div>
-      <div class="flex flex-col justify-between items-start md:items-end col-span-2 md:col-span-1">
-        <div class="text-xs bg-slate-950/80 border border-slate-800 px-3 py-1.5 rounded-lg w-full md:w-auto text-left md:text-right">
-          <span class="text-slate-400">NIFTY 50:</span> <span id="idx-nifty" class="font-bold text-slate-200">--</span>
-        </div>
-        <button onclick="refreshAllPrices()" class="w-full md:w-auto mt-2 bg-indigo-600 hover:bg-indigo-500 transition-colors text-white px-4 py-2 rounded-lg text-sm font-semibold shadow">
-          Refresh Live Prices
+
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- 1-Second Auto Refresh Toggle -->
+        <label class="flex items-center gap-2 text-xs font-medium cursor-pointer bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/60 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 select-none">
+          <input type="checkbox" id="auto-refresh-toggle" onchange="toggleAutoRefresh(this.checked)" class="rounded text-indigo-600 focus:ring-0">
+          <span>Auto-Refresh (1s)</span>
+          <span id="refresh-indicator" class="inline-block w-2 h-2 rounded-full bg-slate-400"></span>
+        </label>
+
+        <!-- Toggle Add Stock Button -->
+        <button onclick="toggleAddStockForm()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold shadow transition-colors flex items-center gap-1.5">
+          <span id="add-btn-icon">+</span>
+          <span id="add-btn-label">Add Stock</span>
+        </button>
+
+        <!-- Export / Import Sync Modal Trigger -->
+        <button onclick="toggleSyncModal(true)" title="Sync cross-device" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-xs font-semibold transition-colors">
+          Sync / Cloud Data
+        </button>
+
+        <!-- Dark / Light Theme Toggle -->
+        <button onclick="toggleTheme()" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-xs font-semibold transition-colors">
+          <span id="theme-icon">☀️ Light</span>
         </button>
       </div>
-    </header>
+    </div>
 
-    <!-- Add New Stock Input Bar -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-md">
-      <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Add Stock to Portfolio</h2>
+    <!-- Hidden by Default: Add Stock Form -->
+    <div id="add-stock-panel" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-md transition-all">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Add New Position</h2>
+        <button onclick="toggleAddStockForm(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs">✕ Close</button>
+      </div>
       <form id="add-stock-form" onsubmit="addStock(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <div>
-          <input type="text" id="input-symbol" placeholder="Symbol (e.g. HBLENGINE, RELIANCE)" required
-            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 uppercase">
+          <input type="text" id="input-symbol" placeholder="Symbol (e.g. RELIANCE, TCS)" required
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 uppercase">
         </div>
         <div>
-          <input type="number" id="input-qty" placeholder="Quantity (e.g. 70)" min="1" step="1" required
-            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <input type="number" id="input-qty" placeholder="Quantity (BQ)" min="1" step="1" required
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500">
         </div>
         <div>
-          <input type="number" id="input-price" placeholder="Buy Price (e.g. 412.57)" min="0.01" step="0.01" required
-            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <input type="number" id="input-price" placeholder="Buy Price (₹)" min="0.01" step="0.01" required
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500">
         </div>
-        <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 transition-colors text-white font-medium px-4 py-2 rounded-lg text-sm shadow">
-          + Add Stock
+        <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg text-sm shadow transition-colors">
+          Save Position
         </button>
       </form>
     </div>
 
+    <!-- KPI Summary Row -->
+    <header class="grid grid-cols-2 md:grid-cols-4 gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
+      <div>
+        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Invested</span>
+        <div id="kpi-invested" class="text-xl sm:text-2xl font-bold mt-1 text-slate-900 dark:text-white">₹0.00</div>
+      </div>
+      <div>
+        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Current Value</span>
+        <div id="kpi-current" class="text-xl sm:text-2xl font-bold mt-1 text-slate-900 dark:text-white">₹0.00</div>
+      </div>
+      <div>
+        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total P&L</span>
+        <div id="kpi-total-pnl" class="text-xl sm:text-2xl font-bold mt-1 text-slate-400">₹0.00</div>
+        <div id="kpi-total-pct" class="text-xs font-medium text-slate-500">0.00%</div>
+      </div>
+      <div>
+        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Today's P&L</span>
+        <div id="kpi-today-pnl" class="text-xl sm:text-2xl font-bold mt-1 text-slate-400">₹0.00</div>
+        <div id="kpi-prev-close" class="text-xs text-slate-400">Prev Close Total: ₹0.00</div>
+      </div>
+    </header>
+
     <!-- Holdings Table -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
-          <thead class="bg-slate-950/80 border-b border-slate-800 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+          <thead class="bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             <tr>
-              <th class="py-3 px-3">SL</th>
+              <th class="py-3 px-3">#</th>
               <th class="py-3 px-3">Script</th>
               <th class="py-3 px-3 text-right">BQ</th>
               <th class="py-3 px-3 text-right">Buy Price</th>
@@ -83,7 +118,7 @@
               <th class="py-3 px-3 text-center">Action</th>
             </tr>
           </thead>
-          <tbody id="portfolio-body" class="divide-y divide-slate-800/60 font-mono text-xs">
+          <tbody id="portfolio-body" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono text-xs">
             <!-- Dynamic rows injected here -->
           </tbody>
         </table>
@@ -92,30 +127,100 @@
 
   </div>
 
+  <!-- Cross-Device Sync Modal -->
+  <div id="sync-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-lg w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-sm text-slate-900 dark:text-slate-100">Permanent Cross-Device Sync</h3>
+        <button onclick="toggleSyncModal(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+        Browsers do not share local memory across devices automatically. Copy your portfolio data below to open or update it on your other phone or computer.
+      </p>
+      <div>
+        <label class="text-[11px] font-semibold text-slate-400 uppercase">Current Holdings JSON</label>
+        <textarea id="sync-data-box" rows="5" class="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg p-2 font-mono text-xs text-slate-800 dark:text-slate-200 focus:outline-none"></textarea>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="importPortfolioData()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 rounded-lg transition-colors">
+          Import & Save
+        </button>
+        <button onclick="copySyncData()" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-semibold px-4 py-2 rounded-lg transition-colors">
+          Copy
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // 1. Point to your working Cloudflare Worker URL
-    const WORKER_BASE = "https://tickerprice.mankrishsolutions.workers.dev/";
+    const WORKER_BASE = "https://tickerprice.mankrishsolutions.workers.dev";
+    const STORAGE_KEY = "my_cross_device_portfolio_holdings";
+    const THEME_KEY = "portfolio_theme_mode";
 
-    // Default seed data if browser storage is empty
-    const initialHoldings = [
-      { id: "1", symbol: "HBLENGINE", bq: 70, price: 412.57 },
-      { id: "2", symbol: "DHOOTTRANS", bq: 7, price: 871.00 }
-    ];
+    let isFetching = false;
+    let autoRefreshInterval = null;
 
-    // Load or initialize holdings from browser localStorage
-    function getStoredHoldings() {
-      const data = localStorage.getItem("my_portfolio_holdings");
-      if (!data) {
-        localStorage.setItem("my_portfolio_holdings", JSON.stringify(initialHoldings));
-        return initialHoldings;
+    // Load Initial Theme
+    function initTheme() {
+      const savedTheme = localStorage.getItem(THEME_KEY) || "dark";
+      if (savedTheme === "dark") {
+        document.documentElement.classList.add("dark");
+        document.getElementById("theme-icon").innerText = "☀️ Light";
+      } else {
+        document.documentElement.classList.remove("dark");
+        document.getElementById("theme-icon").innerText = "🌙 Dark";
       }
-      return JSON.parse(data);
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle("dark");
+      localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
+      document.getElementById("theme-icon").innerText = isDark ? "☀️ Light" : "🌙 Dark";
+    }
+
+    // Toggle Add Stock Form visibility
+    function toggleAddStockForm(forceState) {
+      const panel = document.getElementById("add-stock-panel");
+      const icon = document.getElementById("add-btn-icon");
+      const label = document.getElementById("add-btn-label");
+      
+      const isHidden = forceState !== undefined ? !forceState : panel.classList.contains("hidden");
+      
+      if (isHidden) {
+        panel.classList.remove("hidden");
+        icon.innerText = "✕";
+        label.innerText = "Close Form";
+        document.getElementById("input-symbol").focus();
+      } else {
+        panel.classList.add("hidden");
+        icon.innerText = "+";
+        label.innerText = "Add Stock";
+      }
+    }
+
+    // Get Holdings (Preserves your custom added stocks across reloads)
+    function getStoredHoldings() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) {
+        const defaults = [
+          { id: "1", symbol: "HBLENGINE", bq: 70, price: 412.57 },
+          { id: "2", symbol: "DHOOTTRANS", bq: 7, price: 871.00 }
+        ];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
+        return defaults;
+      }
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return [];
+      }
     }
 
     function saveStoredHoldings(data) {
-      localStorage.setItem("my_portfolio_holdings", JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
 
+    // Formatters
     const fmtInr = (n) => "₹" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const fmtVol = (n) => n > 100000 ? (n / 100000).toFixed(2) + " L" : Number(n).toLocaleString("en-IN");
 
@@ -123,6 +228,7 @@
     async function fetchQuote(symbol) {
       try {
         const res = await fetch(`${WORKER_BASE}/?symbol=${encodeURIComponent(symbol)}`);
+        if (!res.ok) return null;
         return await res.json();
       } catch (e) {
         return null;
@@ -152,10 +258,10 @@
 
       saveStoredHoldings(holdings);
 
-      // Reset form
       symInput.value = "";
       qtyInput.value = "";
       priceInput.value = "";
+      toggleAddStockForm(false);
 
       refreshAllPrices();
     }
@@ -168,80 +274,102 @@
       refreshAllPrices();
     }
 
-    // Refresh and re-render the dashboard
+    // Update Dashboard Data
     async function refreshAllPrices() {
+      if (isFetching) return;
+      isFetching = true;
+
+      const indicator = document.getElementById("refresh-indicator");
+      indicator.classList.remove("bg-slate-400");
+      indicator.classList.add("bg-emerald-500", "animate-ping");
+
       const tbody = document.getElementById("portfolio-body");
       const holdings = getStoredHoldings();
 
       if (holdings.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="14" class="text-center py-8 text-slate-500 font-sans">No holdings added yet. Add a stock using the form above.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="14" class="text-center py-8 text-slate-400 font-sans">No stocks added. Click "+ Add Stock" to start.</td></tr>`;
         updateKPIs(0, 0, 0);
+        finishRefresh();
         return;
       }
 
-      tbody.innerHTML = `<tr><td colspan="14" class="text-center py-8 text-indigo-400 font-sans animate-pulse">Updating live market prices...</td></tr>`;
-
-      // Fetch Nifty quote in the background
+      // Async fetch NIFTY
       fetchQuote("NIFTY_50").then(d => {
         if (d && d.ltp) document.getElementById("idx-nifty").innerText = d.ltp.toLocaleString("en-IN");
       });
 
-      let totalInvested = 0;
-      let totalCurrent = 0;
-      let totalPrevClose = 0;
-      let rowsHtml = "";
+      // Parallel batch fetch for holdings
+      try {
+        const quotes = await Promise.all(holdings.map(h => fetchQuote(h.symbol)));
 
-      for (let i = 0; i < holdings.length; i++) {
-        const item = holdings[i];
-        const quote = await fetchQuote(item.symbol);
+        let totalInvested = 0;
+        let totalCurrent = 0;
+        let totalPrevClose = 0;
+        let rowsHtml = "";
 
-        const ltp = quote?.ltp || item.price;
-        const prevClose = quote?.previousClose || ltp;
-        const high52 = quote?.high52 || 0;
-        const vol = quote?.volume || 0;
+        for (let i = 0; i < holdings.length; i++) {
+          const item = holdings[i];
+          const quote = quotes[i];
 
-        const buyValue = item.bq * item.price;
-        const currValue = item.bq * ltp;
-        const prevValue = item.bq * prevClose;
+          const ltp = quote?.ltp || item.price;
+          const prevClose = quote?.previousClose || ltp;
+          const high52 = quote?.high52 || 0;
+          const vol = quote?.volume || 0;
 
-        const totalDiff = currValue - buyValue;
-        const totalPct = (totalDiff / buyValue) * 100;
-        const todayPct = ((ltp - prevClose) / prevClose) * 100;
-        const from52Pct = high52 > 0 ? ((ltp - high52) / high52) * 100 : 0;
+          const buyValue = item.bq * item.price;
+          const currValue = item.bq * ltp;
+          const prevValue = item.bq * prevClose;
 
-        totalInvested += buyValue;
-        totalCurrent += currValue;
-        totalPrevClose += prevValue;
+          const totalDiff = currValue - buyValue;
+          const totalPct = (totalDiff / buyValue) * 100;
+          const todayPct = ((ltp - prevClose) / prevClose) * 100;
+          const from52Pct = high52 > 0 ? ((ltp - high52) / high52) * 100 : 0;
 
-        const totalColor = totalDiff >= 0 ? "text-emerald-400" : "text-rose-400";
-        const todayColor = todayPct >= 0 ? "text-emerald-400 bg-emerald-950/40" : "text-rose-400 bg-rose-950/40";
+          totalInvested += buyValue;
+          totalCurrent += currValue;
+          totalPrevClose += prevValue;
 
-        rowsHtml += `
-          <tr class="hover:bg-slate-800/40 transition-colors">
-            <td class="py-3 px-3 text-slate-400">${i + 1}</td>
-            <td class="py-3 px-3 font-sans font-bold text-slate-100">${item.symbol}</td>
-            <td class="py-3 px-3 text-right text-slate-300">${item.bq}</td>
-            <td class="py-3 px-3 text-right text-slate-300">${item.price.toFixed(2)}</td>
-            <td class="py-3 px-3 text-right text-slate-300">${fmtInr(buyValue)}</td>
-            <td class="py-3 px-3 text-right font-bold text-white">${ltp.toFixed(2)}</td>
-            <td class="py-3 px-3 text-right text-slate-200 font-semibold">${fmtInr(currValue)}</td>
-            <td class="py-3 px-3 text-right font-semibold ${totalColor}">${totalDiff >= 0 ? '+' : ''}${totalDiff.toFixed(2)}</td>
-            <td class="py-3 px-3 text-right font-semibold ${totalColor}">${totalPct.toFixed(2)}%</td>
-            <td class="py-3 px-3 text-right font-bold rounded ${todayColor}">${todayPct >= 0 ? '+' : ''}${todayPct.toFixed(2)}%</td>
-            <td class="py-3 px-3 text-right text-slate-400">${fmtVol(vol)}</td>
-            <td class="py-3 px-3 text-right text-slate-400">${high52 ? high52.toFixed(2) : '--'}</td>
-            <td class="py-3 px-3 text-right ${from52Pct < 0 ? 'text-rose-400' : 'text-slate-300'}">${from52Pct ? from52Pct.toFixed(2) + '%' : '--'}</td>
-            <td class="py-3 px-3 text-center">
-              <button onclick="removeStock('${item.id}')" title="Delete" class="text-rose-400 hover:text-rose-300 hover:bg-rose-950/50 p-1.5 rounded transition">
-                ✕
-              </button>
-            </td>
-          </tr>
-        `;
+          const totalColor = totalDiff >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400";
+          const todayColor = todayPct >= 0 ? "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/40" : "text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-950/40";
+
+          rowsHtml += `
+            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="py-3 px-3 text-slate-400">${i + 1}</td>
+              <td class="py-3 px-3 font-sans font-bold text-slate-800 dark:text-slate-100">${item.symbol}</td>
+              <td class="py-3 px-3 text-right text-slate-700 dark:text-slate-300">${item.bq}</td>
+              <td class="py-3 px-3 text-right text-slate-700 dark:text-slate-300">${item.price.toFixed(2)}</td>
+              <td class="py-3 px-3 text-right text-slate-700 dark:text-slate-300">${fmtInr(buyValue)}</td>
+              <td class="py-3 px-3 text-right font-bold text-slate-900 dark:text-white">${ltp.toFixed(2)}</td>
+              <td class="py-3 px-3 text-right text-slate-800 dark:text-slate-200 font-semibold">${fmtInr(currValue)}</td>
+              <td class="py-3 px-3 text-right font-semibold ${totalColor}">${totalDiff >= 0 ? '+' : ''}${totalDiff.toFixed(2)}</td>
+              <td class="py-3 px-3 text-right font-semibold ${totalColor}">${totalPct.toFixed(2)}%</td>
+              <td class="py-3 px-3 text-right font-bold rounded ${todayColor}">${todayPct >= 0 ? '+' : ''}${todayPct.toFixed(2)}%</td>
+              <td class="py-3 px-3 text-right text-slate-500 dark:text-slate-400">${fmtVol(vol)}</td>
+              <td class="py-3 px-3 text-right text-slate-500 dark:text-slate-400">${high52 ? high52.toFixed(2) : '--'}</td>
+              <td class="py-3 px-3 text-right ${from52Pct < 0 ? 'text-rose-500 dark:text-rose-400' : 'text-slate-500'}">${from52Pct ? from52Pct.toFixed(2) + '%' : '--'}</td>
+              <td class="py-3 px-3 text-center">
+                <button onclick="removeStock('${item.id}')" title="Delete" class="text-rose-500 hover:text-rose-700 dark:hover:text-rose-300 p-1 rounded transition">
+                  ✕
+                </button>
+              </td>
+            </tr>
+          `;
+        }
+
+        tbody.innerHTML = rowsHtml;
+        updateKPIs(totalInvested, totalCurrent, totalPrevClose);
+      } catch (err) {
+        console.error("Update failed", err);
+      } finally {
+        finishRefresh();
       }
+    }
 
-      tbody.innerHTML = rowsHtml;
-      updateKPIs(totalInvested, totalCurrent, totalPrevClose);
+    function finishRefresh() {
+      isFetching = false;
+      const indicator = document.getElementById("refresh-indicator");
+      indicator.classList.remove("bg-emerald-500", "animate-ping");
+      indicator.classList.add("bg-slate-400");
     }
 
     function updateKPIs(invested, current, prevClose) {
@@ -252,24 +380,66 @@
       document.getElementById("kpi-invested").innerText = fmtInr(invested);
       document.getElementById("kpi-current").innerText = fmtInr(current);
 
-      // Total P&L
       const totalElem = document.getElementById("kpi-total-pnl");
       totalElem.innerText = `${totalPnl >= 0 ? '+' : ''}${fmtInr(totalPnl)}`;
-      totalElem.className = `text-xl sm:text-2xl font-bold mt-1 ${totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      totalElem.className = `text-xl sm:text-2xl font-bold mt-1 ${totalPnl >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`;
 
       const totalPctElem = document.getElementById("kpi-total-pct");
       totalPctElem.innerText = `${totalPct >= 0 ? '+' : ''}${totalPct.toFixed(2)}% overall`;
-      totalPctElem.className = `text-xs font-semibold ${totalPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      totalPctElem.className = `text-xs font-semibold ${totalPct >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`;
 
-      // Today's P&L
       const todayElem = document.getElementById("kpi-today-pnl");
       todayElem.innerText = `${todayPnl >= 0 ? '+' : ''}${fmtInr(todayPnl)}`;
-      todayElem.className = `text-xl sm:text-2xl font-bold mt-1 ${todayPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      todayElem.className = `text-xl sm:text-2xl font-bold mt-1 ${todayPnl >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`;
 
       document.getElementById("kpi-prev-close").innerText = `Prev Close Total: ${fmtInr(prevClose)}`;
     }
 
-    // Initial load
+    // Auto Refresh Controller (1-second tick)
+    function toggleAutoRefresh(start) {
+      if (start) {
+        refreshAllPrices();
+        autoRefreshInterval = setInterval(refreshAllPrices, 1000);
+      } else {
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+      }
+    }
+
+    // Sync / Modal Tools
+    function toggleSyncModal(show) {
+      const modal = document.getElementById("sync-modal");
+      if (show) {
+        document.getElementById("sync-data-box").value = JSON.stringify(getStoredHoldings(), null, 2);
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+      } else {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+      }
+    }
+
+    function copySyncData() {
+      const box = document.getElementById("sync-data-box");
+      box.select();
+      navigator.clipboard.writeText(box.value);
+      alert("Holdings copied to clipboard! Paste it on your other device.");
+    }
+
+    function importPortfolioData() {
+      try {
+        const data = JSON.parse(document.getElementById("sync-data-box").value);
+        if (!Array.isArray(data)) throw new Error("Invalid format");
+        saveStoredHoldings(data);
+        toggleSyncModal(false);
+        refreshAllPrices();
+        alert("Holdings successfully imported!");
+      } catch (e) {
+        alert("Invalid JSON format. Please paste valid holdings JSON.");
+      }
+    }
+
+    // App Initialization
+    initTheme();
     refreshAllPrices();
   </script>
 </body>
