@@ -4,12 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portfolio Tracker</title>
+
+  <!-- 1. Suppress Tailwind CDN production warning in console -->
+  <script>
+    const _warn = console.warn;
+    console.warn = function(...args) {
+      if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com should not be used in production')) {
+        return;
+      }
+      _warn.apply(console, args);
+    };
+  </script>
+
+  <!-- 2. Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
     }
   </script>
+
   <style>
     /* Compact scrollbar */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
