@@ -48,7 +48,7 @@
     <!-- Active Account Tag -->
     <div class="text-xs px-2.5 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-between">
       <span class="text-slate-500 dark:text-slate-400">Viewing Account:</span>
-      <strong id="drawer-account-label" class="text-indigo-600 dark:text-indigo-400 font-bold font-mono">VM6747</strong>
+      <strong id="drawer-account-label" class="text-indigo-600 dark:text-indigo-400 font-bold font-mono">--</strong>
     </div>
 
     <!-- Summary Performance Card -->
@@ -151,6 +151,11 @@
 
       <!-- Action Controls -->
       <div class="flex items-center gap-2">
+        <button onclick="toggleConsolidatedSection()" id="btn-toggle-consolidated" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition">
+          <span>🏛️</span>
+          <span id="btn-consolidated-text">Show Consolidated</span>
+        </button>
+
         <label class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 cursor-pointer select-none text-xs">
           <input type="checkbox" id="auto-refresh-toggle" onchange="toggleAutoRefresh(this.checked)" class="w-3.5 h-3.5 text-indigo-600 rounded">
           <span>1s Auto</span>
@@ -170,6 +175,69 @@
         </button>
       </div>
     </header>
+
+    <!-- Consolidated All-Accounts Portfolio Section (Hidden by Default) -->
+    <section id="consolidated-section" class="hidden bg-white dark:bg-slate-900 border-2 border-amber-500/50 dark:border-amber-500/40 rounded-xl p-4 sm:p-5 shadow-lg space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <span class="text-xl">🏛️</span>
+          <div>
+            <h2 class="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">Consolidated Multi-Account Performance</h2>
+            <p class="text-xs text-slate-400">Combined view across all connected portfolio accounts</p>
+          </div>
+        </div>
+        <button onclick="toggleConsolidatedSection(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold px-2 py-1 rounded text-xs bg-slate-100 dark:bg-slate-800">
+          ✕ Hide
+        </button>
+      </div>
+
+      <!-- High-Level KPI Strip -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
+          <span class="text-[10px] uppercase font-bold text-slate-400">Total Invested (All Accounts)</span>
+          <div id="c-kpi-invested" class="font-black text-base sm:text-lg text-slate-900 dark:text-white mt-0.5">₹0.00</div>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
+          <span class="text-[10px] uppercase font-bold text-slate-400">Total Current Value</span>
+          <div id="c-kpi-current" class="font-black text-base sm:text-lg text-slate-900 dark:text-white mt-0.5">₹0.00</div>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] uppercase font-bold text-slate-400">Consolidated P&L</span>
+            <span id="c-kpi-total-pct" class="text-[11px] font-bold">0.00%</span>
+          </div>
+          <div id="c-kpi-total-pnl" class="font-black text-base sm:text-lg mt-0.5">₹0.00</div>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
+          <span class="text-[10px] uppercase font-bold text-slate-400">Total Today's P&L</span>
+          <div id="c-kpi-today-pnl" class="font-black text-base sm:text-lg mt-0.5">₹0.00</div>
+        </div>
+      </div>
+
+      <!-- Breakdown by Account Table -->
+      <div>
+        <h3 class="text-xs uppercase font-bold text-slate-400 tracking-wider mb-2">Account-wise Contribution Breakdown</h3>
+        <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+          <table class="w-full text-left font-mono text-xs border-collapse">
+            <thead class="bg-slate-50 dark:bg-slate-950/80 text-[10px] text-slate-400 uppercase font-sans">
+              <tr>
+                <th class="py-2 px-3">Account</th>
+                <th class="py-2 px-3 text-right">Holdings</th>
+                <th class="py-2 px-3 text-right">Invested</th>
+                <th class="py-2 px-3 text-right">Current Value</th>
+                <th class="py-2 px-3 text-right">Total P&L (₹)</th>
+                <th class="py-2 px-3 text-right">Total %</th>
+                <th class="py-2 px-3 text-right">Today's P&L</th>
+                <th class="py-2 px-3 text-center font-sans">Switch</th>
+              </tr>
+            </thead>
+            <tbody id="consolidated-table-body" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+              <!-- Injected dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
     <!-- Hidden Add Position Drawer -->
     <div id="add-form-panel" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-md">
@@ -220,7 +288,7 @@
     <!-- Holdings & Multi-Account Card -->
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
       
-      <!-- Header Bar with Account Tabs and Add Account Option -->
+      <!-- Header Bar with Account Tabs and Management Controls -->
       <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-2">
           <div class="flex items-center gap-2 mr-2">
@@ -233,10 +301,18 @@
             <!-- Dynamic Account buttons injected here -->
           </div>
 
-          <!-- + Add New Account Button -->
-          <button onclick="promptAddAccount()" title="Create another account portfolio" class="px-2.5 py-1 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-semibold text-xs flex items-center gap-1 transition">
-            <span>+</span> Account
-          </button>
+          <!-- Account Controls: Add, Rename, Delete -->
+          <div class="flex items-center gap-1.5">
+            <button onclick="promptAddAccount()" title="Create another account" class="px-2.5 py-1 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-semibold text-xs flex items-center gap-1 transition">
+              <span>+</span> Account
+            </button>
+            <button onclick="renameActiveAccount()" title="Rename current active account" class="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs border border-slate-200 dark:border-slate-700 transition">
+              ✏️ Rename
+            </button>
+            <button onclick="deleteActiveAccount()" title="Delete current active account (must be empty)" class="px-2 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 text-xs border border-rose-200 dark:border-rose-900 transition">
+              🗑️ Delete
+            </button>
+          </div>
         </div>
 
         <div class="text-xs text-slate-400 flex items-center gap-2">
@@ -284,11 +360,10 @@
   <script>
     const WORKER_BASE = "https://tickerprice.mankrishsolutions.workers.dev";
     const THEME_KEY = "portfolio_theme_mode";
-    const DEFAULT_ACCOUNT = "VM6747";
 
     let holdings = [];
-    let accounts = [DEFAULT_ACCOUNT];
-    let activeAccount = DEFAULT_ACCOUNT;
+    let accounts = [];
+    let activeAccount = "";
     let computedData = [];
     let isFetching = false;
     let autoRefreshInterval = null;
@@ -296,6 +371,23 @@
     // Sorting state
     let currentSortCol = 'totalDiff';
     let currentSortAsc = false;
+
+    // Consolidated Section Toggle
+    function toggleConsolidatedSection(forceState) {
+      const section = document.getElementById("consolidated-section");
+      const btnText = document.getElementById("btn-consolidated-text");
+      const isHidden = forceState !== undefined ? !forceState : section.classList.contains("hidden");
+
+      if (isHidden) {
+        section.classList.remove("hidden");
+        btnText.innerText = "Hide Consolidated";
+        renderConsolidatedBreakdown();
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        section.classList.add("hidden");
+        btnText.innerText = "Show Consolidated";
+      }
+    }
 
     // Left Performance Drawer Controller
     function togglePerformanceDrawer(open) {
@@ -349,14 +441,14 @@
     // Account Switcher
     function selectAccount(acc) {
       activeAccount = acc;
-      document.getElementById("drawer-account-label").innerText = activeAccount;
+      document.getElementById("drawer-account-label").innerText = activeAccount || "--";
       renderAccountTabs();
       renderDashboard();
     }
 
     // Create New Account
     function promptAddAccount() {
-      const name = prompt("Enter new account name/ID (e.g. ZERODHA_2, HUSBAND_ACC):");
+      const name = prompt("Enter new account name/ID (e.g. ZERODHA_2, DEMAT_GROWW):");
       if (!name) return;
       const cleanName = name.trim().toUpperCase();
       if (!cleanName) return;
@@ -367,6 +459,73 @@
       saveToCloud(holdings);
     }
 
+    // Rename Active Account
+    async function renameActiveAccount() {
+      const currentName = activeAccount;
+      if (!currentName) return;
+
+      const newName = prompt(`Enter new name for account "${currentName}":`, currentName);
+      if (!newName) return;
+      const cleanName = newName.trim().toUpperCase();
+      if (!cleanName || cleanName === currentName) return;
+
+      if (accounts.includes(cleanName)) {
+        alert(`An account named "${cleanName}" already exists!`);
+        return;
+      }
+
+      // Update all holdings under this account
+      holdings.forEach(item => {
+        if (item.account === currentName) {
+          item.account = cleanName;
+        }
+      });
+
+      // Update accounts array
+      const idx = accounts.indexOf(currentName);
+      if (idx !== -1) accounts[idx] = cleanName;
+
+      activeAccount = cleanName;
+
+      await saveToCloud(holdings);
+      document.getElementById("drawer-account-label").innerText = activeAccount;
+      renderAccountTabs();
+      renderDashboard();
+      renderConsolidatedBreakdown();
+    }
+
+    // Delete Active Account
+    async function deleteActiveAccount() {
+      const currentName = activeAccount;
+      if (!currentName) return;
+
+      if (accounts.length <= 1) {
+        alert("You must have at least one account in your portfolio.");
+        return;
+      }
+
+      // Verify if account has any remaining stock positions
+      const count = holdings.filter(item => item.account === currentName).length;
+      if (count > 0) {
+        alert(`Cannot delete account "${currentName}" because it currently holds ${count} stock position(s). Delete or move the stocks first.`);
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to delete the empty account "${currentName}"?`)) {
+        return;
+      }
+
+      // Remove from accounts array
+      accounts = accounts.filter(acc => acc !== currentName);
+      activeAccount = accounts[0];
+
+      await saveToCloud(holdings);
+      document.getElementById("drawer-account-label").innerText = activeAccount;
+      renderAccountTabs();
+      renderDashboard();
+      renderConsolidatedBreakdown();
+    }
+
     // Render Account Selector Tabs
     function renderAccountTabs() {
       const container = document.getElementById("account-tabs-container");
@@ -374,7 +533,7 @@
 
       accounts.forEach(acc => {
         const isCurrent = acc === activeAccount;
-        const count = holdings.filter(h => (h.account || DEFAULT_ACCOUNT) === acc).length;
+        const count = holdings.filter(h => h.account === acc).length;
         
         if (isCurrent) {
           tabsHtml += `
@@ -408,19 +567,35 @@
         if (!res.ok) throw new Error("Cloud fetch failed");
         const data = await res.json();
         
-        // Ensure all holdings have an account property (defaulting to VM6747)
-        holdings = (Array.isArray(data) ? data : []).map(item => ({
+        const rawHoldings = Array.isArray(data) ? data : [];
+
+        // Discover existing accounts directly from the holdings
+        const discovered = new Set();
+        rawHoldings.forEach(h => {
+          if (h.account && h.account.trim()) {
+            discovered.add(h.account.trim().toUpperCase());
+          }
+        });
+
+        // If no account exists in data, fall back to VM6747
+        if (discovered.size === 0) {
+          discovered.add("VM6747");
+        }
+
+        accounts = Array.from(discovered);
+        const fallbackAccount = accounts[0];
+
+        // Assign valid account to each holding
+        holdings = rawHoldings.map(item => ({
           ...item,
-          account: item.account || DEFAULT_ACCOUNT
+          account: item.account && item.account.trim() ? item.account.trim().toUpperCase() : fallbackAccount
         }));
 
-        // Discover and collect all existing accounts
-        const discoveredAccounts = new Set([DEFAULT_ACCOUNT]);
-        holdings.forEach(h => {
-          if (h.account) discoveredAccounts.add(h.account);
-        });
-        accounts = Array.from(discoveredAccounts);
+        if (!activeAccount || !accounts.includes(activeAccount)) {
+          activeAccount = accounts[0];
+        }
 
+        document.getElementById("drawer-account-label").innerText = activeAccount;
         renderAccountTabs();
         refreshAllPrices();
       } catch (err) {
@@ -560,7 +735,6 @@
 
       refreshMacroTickers();
 
-      // Get distinct stock symbols to minimize requests
       const uniqueSymbols = Array.from(new Set(holdings.map(h => h.symbol)));
 
       try {
@@ -606,6 +780,7 @@
 
         renderAccountTabs();
         renderDashboard();
+        renderConsolidatedBreakdown();
       } catch (err) {
         console.error("Refresh error:", err);
       } finally {
@@ -616,8 +791,7 @@
 
     // Render Data to Table and Cards (Filtered by Selected Account)
     function renderDashboard() {
-      // Filter stocks belonging strictly to the selected account tab
-      const accountHoldings = computedData.filter(item => (item.account || DEFAULT_ACCOUNT) === activeAccount);
+      const accountHoldings = computedData.filter(item => item.account === activeAccount);
       document.getElementById("holdings-count-badge").innerText = accountHoldings.length;
 
       accountHoldings.sort((a, b) => {
@@ -715,6 +889,84 @@
       renderTopMovers(accountHoldings);
     }
 
+    // Render Consolidated All-Accounts Performance & Table
+    function renderConsolidatedBreakdown() {
+      let grandInvested = 0;
+      let grandCurrent = 0;
+      let grandPrev = 0;
+
+      let breakdownRows = "";
+
+      accounts.forEach(acc => {
+        const accItems = computedData.filter(i => i.account === acc);
+        let accInv = 0;
+        let accCur = 0;
+        let accPre = 0;
+
+        accItems.forEach(it => {
+          accInv += it.buyValue;
+          accCur += it.currValue;
+          accPre += it.prevValue;
+        });
+
+        grandInvested += accInv;
+        grandCurrent += accCur;
+        grandPrev += accPre;
+
+        const accPnl = accCur - accInv;
+        const accPct = accInv > 0 ? (accPnl / accInv) * 100 : 0;
+        const accToday = accCur - accPre;
+
+        const pnlCol = accPnl >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400";
+        const todayCol = accToday >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400";
+
+        breakdownRows += `
+          <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+            <td class="py-2.5 px-3 font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+              <span>📁</span>
+              <span>${acc}</span>
+              ${acc === activeAccount ? '<span class="text-[9px] bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.2 rounded font-sans">Active</span>' : ''}
+            </td>
+            <td class="py-2.5 px-3 text-right text-slate-500 dark:text-slate-400 font-semibold">${accItems.length}</td>
+            <td class="py-2.5 px-3 text-right text-slate-700 dark:text-slate-300">${fmtInr(accInv)}</td>
+            <td class="py-2.5 px-3 text-right font-bold text-slate-900 dark:text-white">${fmtInr(accCur)}</td>
+            <td class="py-2.5 px-3 text-right font-bold ${pnlCol}">${accPnl >= 0 ? '+' : ''}${fmtInr(accPnl)}</td>
+            <td class="py-2.5 px-3 text-right font-bold ${pnlCol}">${accPnl >= 0 ? '+' : ''}${accPct.toFixed(2)}%</td>
+            <td class="py-2.5 px-3 text-right font-bold ${todayCol}">${accToday >= 0 ? '+' : ''}${fmtInr(accToday)}</td>
+            <td class="py-2.5 px-3 text-center">
+              <button onclick="selectAccount('${acc}'); toggleConsolidatedSection(false);" class="text-[11px] bg-indigo-50 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded transition font-sans font-semibold">
+                View
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      const grandTotalPnl = grandCurrent - grandInvested;
+      const grandTotalPct = grandInvested > 0 ? (grandTotalPnl / grandInvested) * 100 : 0;
+      const grandTodayPnl = grandCurrent - grandPrev;
+
+      const grandColor = grandTotalPnl >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400";
+      const grandTodayColor = grandTodayPnl >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400";
+
+      document.getElementById("c-kpi-invested").innerText = fmtInr(grandInvested);
+      document.getElementById("c-kpi-current").innerText = fmtInr(grandCurrent);
+
+      const cPnlElem = document.getElementById("c-kpi-total-pnl");
+      cPnlElem.innerText = `${grandTotalPnl >= 0 ? '+' : ''}${fmtInr(grandTotalPnl)}`;
+      cPnlElem.className = `font-black text-base sm:text-lg mt-0.5 ${grandColor}`;
+
+      const cPctElem = document.getElementById("c-kpi-total-pct");
+      cPctElem.innerText = `${grandTotalPnl >= 0 ? '+' : ''}${grandTotalPct.toFixed(2)}%`;
+      cPctElem.className = `text-[11px] font-bold ${grandColor}`;
+
+      const cTodayElem = document.getElementById("c-kpi-today-pnl");
+      cTodayElem.innerText = `${grandTodayPnl >= 0 ? '+' : ''}${fmtInr(grandTodayPnl)}`;
+      cTodayElem.className = `font-black text-base sm:text-lg mt-0.5 ${grandTodayColor}`;
+
+      document.getElementById("consolidated-table-body").innerHTML = breakdownRows || `<tr><td colspan="8" class="text-center py-4 text-slate-400">No accounts registered yet.</td></tr>`;
+    }
+
     // Render Side Drawer Top Movers for Active Account
     function renderTopMovers(accountHoldings) {
       const container = document.getElementById("top-movers-list");
@@ -759,7 +1011,6 @@
       const totalColor = totalPnl >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400';
       const todayColor = todayPnl >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400';
 
-      // Drawer KPIs
       document.getElementById("kpi-invested").innerText = fmtInr(invested);
       document.getElementById("kpi-current").innerText = fmtInr(current);
 
@@ -777,7 +1028,6 @@
 
       document.getElementById("kpi-prev-close").innerText = `Prev: ${fmtInr(prevClose)}`;
 
-      // Mobile Summary Row
       document.getElementById("m-kpi-invested").innerText = fmtInr(invested);
       document.getElementById("m-kpi-current").innerText = fmtInr(current);
 
