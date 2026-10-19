@@ -34,13 +34,73 @@
 </head>
 <body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen text-[13px] font-sans transition-colors duration-150 p-2 sm:p-4">
 
-  <div class="max-w-[1650px] mx-auto space-y-3">
+  <!-- Left Hidden Slide-over Drawer Backdrop & Panel -->
+  <div id="drawer-backdrop" onclick="togglePerformanceDrawer(false)" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 hidden transition-opacity"></div>
+  <aside id="performance-drawer" class="fixed top-0 left-0 bottom-0 w-80 sm:w-96 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50 transform -translate-x-full transition-transform duration-300 ease-in-out p-5 overflow-y-auto space-y-4 shadow-2xl">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+      <div class="flex items-center gap-2">
+        <span class="text-lg">📊</span>
+        <h2 class="font-extrabold text-sm uppercase tracking-wider text-slate-700 dark:text-slate-200">Portfolio Stats</h2>
+      </div>
+      <button onclick="togglePerformanceDrawer(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg p-1">✕</button>
+    </div>
+
+    <!-- Active Account Tag -->
+    <div class="text-xs px-2.5 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-between">
+      <span class="text-slate-500 dark:text-slate-400">Viewing Account:</span>
+      <strong id="drawer-account-label" class="text-indigo-600 dark:text-indigo-400 font-bold font-mono">VM6747</strong>
+    </div>
+
+    <!-- Summary Performance Card -->
+    <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 space-y-3">
+      <div>
+        <div class="text-xs text-slate-400">Total Portfolio Value</div>
+        <div id="kpi-current" class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">₹0.00</div>
+      </div>
+
+      <div class="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
+        <span class="text-xs text-slate-400">Total Invested</span>
+        <span id="kpi-invested" class="font-bold text-sm text-slate-800 dark:text-slate-200">₹0.00</span>
+      </div>
+
+      <div class="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
+        <div>
+          <div class="text-xs text-slate-400">Total Net Return</div>
+          <div id="kpi-total-pct" class="text-[11px] font-bold">0.00%</div>
+        </div>
+        <div id="kpi-total-pnl" class="text-base font-extrabold text-right">₹0.00</div>
+      </div>
+
+      <div class="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
+        <div>
+          <div class="text-xs text-slate-400">Today's P&L</div>
+          <div id="kpi-prev-close" class="text-[10px] text-slate-400">Prev: ₹0.00</div>
+        </div>
+        <div id="kpi-today-pnl" class="text-base font-extrabold text-right">₹0.00</div>
+      </div>
+    </div>
+
+    <!-- Top Movers Widget -->
+    <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 space-y-3">
+      <h3 class="font-bold text-xs uppercase tracking-wider text-slate-400">Top Movers (Today)</h3>
+      <div id="top-movers-list" class="space-y-2 text-xs">
+        <!-- Dynamic mover items injected here -->
+      </div>
+    </div>
+  </aside>
+
+  <div class="max-w-[1750px] mx-auto space-y-3">
 
     <!-- Top Navigation & Controls Bar -->
     <header class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 flex flex-wrap items-center justify-between gap-3 shadow-sm">
       
-      <!-- Brand & Stacked 2-Line Market Tickers -->
+      <!-- Drawer Menu Button + Brand & Stacked 2-Line Market Tickers -->
       <div class="flex flex-wrap items-center gap-2">
+        <button onclick="togglePerformanceDrawer(true)" title="Open Portfolio Stats & Performance" class="bg-indigo-50 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 font-bold px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-slate-700 flex items-center gap-1.5 text-xs shadow-sm transition">
+          <span>☰</span>
+          <span>Stats</span>
+        </button>
+
         <h1 class="font-extrabold text-base tracking-tight mr-1">Portfolio</h1>
 
         <!-- NIFTY 50 -->
@@ -113,11 +173,24 @@
 
     <!-- Hidden Add Position Drawer -->
     <div id="add-form-panel" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-md">
-      <form onsubmit="addStock(event)" class="grid grid-cols-2 sm:grid-cols-4 gap-3 items-center">
-        <input type="text" id="input-symbol" placeholder="SYMBOL (e.g. RELIANCE)" required class="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-lg uppercase text-xs focus:outline-none focus:border-indigo-500">
-        <input type="number" id="input-qty" placeholder="BQ (Quantity)" min="1" step="1" required class="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
-        <input type="number" id="input-price" placeholder="Buy Price (₹)" min="0.01" step="0.01" required class="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
-        <div class="flex gap-2 col-span-2 sm:col-span-1">
+      <form onsubmit="addStock(event)" class="grid grid-cols-2 sm:grid-cols-5 gap-3 items-center">
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Target Account</label>
+          <select id="input-account" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold focus:outline-none focus:border-indigo-500"></select>
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Symbol</label>
+          <input type="text" id="input-symbol" placeholder="e.g. RELIANCE" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-lg uppercase text-xs focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Quantity (BQ)</label>
+          <input type="number" id="input-qty" placeholder="e.g. 50" min="1" step="1" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Buy Price (₹)</label>
+          <input type="number" id="input-price" placeholder="e.g. 1250.00" min="0.01" step="0.01" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
+        </div>
+        <div class="flex gap-2 items-end pt-4 sm:pt-0">
           <button type="submit" id="save-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-1.5 rounded-lg text-xs shadow">Save Position</button>
           <button type="button" onclick="toggleAddForm(false)" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg text-xs">Cancel</button>
         </div>
@@ -144,92 +217,64 @@
       </div>
     </div>
 
-    <!-- Mobile View: Demat App Card Layout (Visible only on < md screens) -->
-    <div id="mobile-cards-container" class="md:hidden space-y-2">
-      <!-- Injected via JavaScript -->
-    </div>
-
-    <!-- Desktop View: Option 3 Dual-Pane Split Layout (Hidden on Mobile) -->
-    <div class="hidden md:grid md:grid-cols-12 gap-4 items-start">
+    <!-- Holdings & Multi-Account Card -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
       
-      <!-- LEFT PANE: Holdings Table (9 Cols) -->
-      <div class="md:col-span-8 lg:col-span-9 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
-        <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <div class="font-bold text-sm tracking-tight flex items-center gap-2">
-            <span>Holdings</span>
+      <!-- Header Bar with Account Tabs and Add Account Option -->
+      <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex items-center gap-2 mr-2">
+            <span class="font-extrabold text-sm tracking-tight">Holdings</span>
             <span id="holdings-count-badge" class="text-xs bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full font-mono font-semibold">0</span>
           </div>
-          <div class="text-xs text-slate-400">Click headers to sort column</div>
+
+          <!-- Dynamic Account Tabs -->
+          <div id="account-tabs-container" class="flex flex-wrap items-center gap-1.5">
+            <!-- Dynamic Account buttons injected here -->
+          </div>
+
+          <!-- + Add New Account Button -->
+          <button onclick="promptAddAccount()" title="Create another account portfolio" class="px-2.5 py-1 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-semibold text-xs flex items-center gap-1 transition">
+            <span>+</span> Account
+          </button>
         </div>
 
-        <div class="overflow-x-auto">
-          <table class="w-full text-left font-mono text-[13px] border-collapse">
-            <thead class="bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 text-[11px] text-slate-400 uppercase select-none font-sans tracking-wider">
-              <tr>
-                <th class="py-2.5 px-3">#</th>
-                <th onclick="sortTable('symbol')" class="py-2.5 px-3 th-sort">Script <span id="sort-symbol"></span></th>
-                <th onclick="sortTable('bq')" class="py-2.5 px-3 text-right th-sort">BQ <span id="sort-bq"></span></th>
-                <th onclick="sortTable('price')" class="py-2.5 px-3 text-right th-sort">Buy Price <span id="sort-price"></span></th>
-                <th onclick="sortTable('buyValue')" class="py-2.5 px-3 text-right th-sort">Buy Value <span id="sort-buyValue"></span></th>
-                <th onclick="sortTable('ltp')" class="py-2.5 px-3 text-right th-sort">LTP <span id="sort-ltp"></span></th>
-                <th onclick="sortTable('currValue')" class="py-2.5 px-3 text-right th-sort">Current Val <span id="sort-currValue"></span></th>
-                <th onclick="sortTable('totalDiff')" class="py-2.5 px-3 text-right th-sort">Total P&L <span id="sort-totalDiff"></span></th>
-                <th onclick="sortTable('todayPct')" class="py-2.5 px-3 text-right th-sort">Day % <span id="sort-todayPct"></span></th>
-                <th onclick="sortTable('from52Pct')" class="py-2.5 px-3 text-right th-sort">52W Range <span id="sort-from52Pct"></span></th>
-                <th class="py-2.5 px-3 text-center font-sans">Act</th>
-              </tr>
-            </thead>
-            <tbody id="portfolio-body" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-              <!-- Dynamic rows injected here -->
-            </tbody>
-          </table>
+        <div class="text-xs text-slate-400 flex items-center gap-2">
+          <button onclick="togglePerformanceDrawer(true)" class="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold flex items-center gap-1">
+            <span>📊 View Performance</span>
+          </button>
+          <span>•</span>
+          <span>Click headers to sort</span>
         </div>
       </div>
 
-      <!-- RIGHT PANE: Sticky Performance & Analytics Card (3 Cols) -->
-      <div class="md:col-span-4 lg:col-span-3 space-y-3 sticky top-4">
-        
-        <!-- Summary Card -->
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-4">
-          <h2 class="font-bold text-xs uppercase tracking-wider text-slate-400">Portfolio Performance</h2>
-          
-          <div class="space-y-3">
-            <div>
-              <div class="text-xs text-slate-400">Total Portfolio Value</div>
-              <div id="kpi-current" class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">₹0.00</div>
-            </div>
+      <!-- Mobile View: Demat App Card Layout (Visible only on < md screens) -->
+      <div id="mobile-cards-container" class="md:hidden p-3 space-y-2">
+        <!-- Injected via JavaScript -->
+      </div>
 
-            <div class="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex justify-between items-center">
-              <span class="text-xs text-slate-400">Total Invested</span>
-              <span id="kpi-invested" class="font-bold text-sm text-slate-800 dark:text-slate-200">₹0.00</span>
-            </div>
-
-            <div class="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex justify-between items-center">
-              <div>
-                <div class="text-xs text-slate-400">Total Net Return</div>
-                <div id="kpi-total-pct" class="text-[11px] font-bold">0.00%</div>
-              </div>
-              <div id="kpi-total-pnl" class="text-base font-extrabold text-right">₹0.00</div>
-            </div>
-
-            <div class="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex justify-between items-center">
-              <div>
-                <div class="text-xs text-slate-400">Today's P&L</div>
-                <div id="kpi-prev-close" class="text-[10px] text-slate-400">Prev: ₹0.00</div>
-              </div>
-              <div id="kpi-today-pnl" class="text-base font-extrabold text-right">₹0.00</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Top Movers Mini-Panel -->
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
-          <h3 class="font-bold text-xs uppercase tracking-wider text-slate-400">Top Movers (Today)</h3>
-          <div id="top-movers-list" class="space-y-2 text-xs">
-            <!-- Dynamic mover items injected here -->
-          </div>
-        </div>
-
+      <!-- Desktop Full Width View: High-Density Table with Click-to-Sort Headers (Hidden on Mobile) -->
+      <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-left font-mono text-[13px] border-collapse">
+          <thead class="bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 text-[11px] text-slate-400 uppercase select-none font-sans tracking-wider">
+            <tr>
+              <th class="py-2.5 px-3">#</th>
+              <th onclick="sortTable('symbol')" class="py-2.5 px-3 th-sort">Script <span id="sort-symbol"></span></th>
+              <th onclick="sortTable('bq')" class="py-2.5 px-3 text-right th-sort">BQ <span id="sort-bq"></span></th>
+              <th onclick="sortTable('price')" class="py-2.5 px-3 text-right th-sort">Buy Price <span id="sort-price"></span></th>
+              <th onclick="sortTable('buyValue')" class="py-2.5 px-3 text-right th-sort">Buy Value <span id="sort-buyValue"></span></th>
+              <th onclick="sortTable('ltp')" class="py-2.5 px-3 text-right th-sort">LTP <span id="sort-ltp"></span></th>
+              <th onclick="sortTable('currValue')" class="py-2.5 px-3 text-right th-sort">Current Val <span id="sort-currValue"></span></th>
+              <th onclick="sortTable('totalDiff')" class="py-2.5 px-3 text-right th-sort">Total P&L <span id="sort-totalDiff"></span></th>
+              <th onclick="sortTable('todayPct')" class="py-2.5 px-3 text-right th-sort">Day % <span id="sort-todayPct"></span></th>
+              <th onclick="sortTable('from52Pct')" class="py-2.5 px-3 text-right th-sort">52W Range <span id="sort-from52Pct"></span></th>
+              <th class="py-2.5 px-3 text-center font-sans">Act</th>
+            </tr>
+          </thead>
+          <tbody id="portfolio-body" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+            <!-- Dynamic dense rows injected here -->
+          </tbody>
+        </table>
       </div>
 
     </div>
@@ -239,15 +284,31 @@
   <script>
     const WORKER_BASE = "https://tickerprice.mankrishsolutions.workers.dev";
     const THEME_KEY = "portfolio_theme_mode";
+    const DEFAULT_ACCOUNT = "VM6747";
 
     let holdings = [];
+    let accounts = [DEFAULT_ACCOUNT];
+    let activeAccount = DEFAULT_ACCOUNT;
     let computedData = [];
     let isFetching = false;
     let autoRefreshInterval = null;
 
-    // Default sorting
+    // Sorting state
     let currentSortCol = 'totalDiff';
     let currentSortAsc = false;
+
+    // Left Performance Drawer Controller
+    function togglePerformanceDrawer(open) {
+      const drawer = document.getElementById("performance-drawer");
+      const backdrop = document.getElementById("drawer-backdrop");
+      if (open) {
+        drawer.classList.remove("-translate-x-full");
+        backdrop.classList.remove("hidden");
+      } else {
+        drawer.classList.add("-translate-x-full");
+        backdrop.classList.add("hidden");
+      }
+    }
 
     // Theme Management
     function initTheme() {
@@ -274,6 +335,8 @@
       const isHidden = forceState !== undefined ? !forceState : panel.classList.contains("hidden");
 
       if (isHidden) {
+        updateAccountOptions();
+        document.getElementById("input-account").value = activeAccount;
         panel.classList.remove("hidden");
         icon.innerText = "✕";
         document.getElementById("input-symbol").focus();
@@ -283,13 +346,82 @@
       }
     }
 
+    // Account Switcher
+    function selectAccount(acc) {
+      activeAccount = acc;
+      document.getElementById("drawer-account-label").innerText = activeAccount;
+      renderAccountTabs();
+      renderDashboard();
+    }
+
+    // Create New Account
+    function promptAddAccount() {
+      const name = prompt("Enter new account name/ID (e.g. ZERODHA_2, HUSBAND_ACC):");
+      if (!name) return;
+      const cleanName = name.trim().toUpperCase();
+      if (!cleanName) return;
+      if (!accounts.includes(cleanName)) {
+        accounts.push(cleanName);
+      }
+      selectAccount(cleanName);
+      saveToCloud(holdings);
+    }
+
+    // Render Account Selector Tabs
+    function renderAccountTabs() {
+      const container = document.getElementById("account-tabs-container");
+      let tabsHtml = "";
+
+      accounts.forEach(acc => {
+        const isCurrent = acc === activeAccount;
+        const count = holdings.filter(h => (h.account || DEFAULT_ACCOUNT) === acc).length;
+        
+        if (isCurrent) {
+          tabsHtml += `
+            <button onclick="selectAccount('${acc}')" class="px-3 py-1 rounded-lg bg-indigo-600 text-white font-mono font-bold text-xs shadow-sm flex items-center gap-1.5 transition">
+              <span>${acc}</span>
+              <span class="bg-indigo-700 text-[10px] px-1.5 py-0.2 rounded-full">${count}</span>
+            </button>
+          `;
+        } else {
+          tabsHtml += `
+            <button onclick="selectAccount('${acc}')" class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-mono font-semibold text-xs border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition">
+              <span>${acc}</span>
+              <span class="text-slate-400 text-[10px]">${count}</span>
+            </button>
+          `;
+        }
+      });
+
+      container.innerHTML = tabsHtml;
+    }
+
+    function updateAccountOptions() {
+      const select = document.getElementById("input-account");
+      select.innerHTML = accounts.map(a => `<option value="${a}">${a}</option>`).join("");
+    }
+
     // Cloudflare KV Read
     async function syncFromCloud() {
       try {
         const res = await fetch(`${WORKER_BASE}/holdings?t=${Date.now()}`);
         if (!res.ok) throw new Error("Cloud fetch failed");
-        holdings = await res.json();
-        document.getElementById("holdings-count-badge").innerText = holdings.length;
+        const data = await res.json();
+        
+        // Ensure all holdings have an account property (defaulting to VM6747)
+        holdings = (Array.isArray(data) ? data : []).map(item => ({
+          ...item,
+          account: item.account || DEFAULT_ACCOUNT
+        }));
+
+        // Discover and collect all existing accounts
+        const discoveredAccounts = new Set([DEFAULT_ACCOUNT]);
+        holdings.forEach(h => {
+          if (h.account) discoveredAccounts.add(h.account);
+        });
+        accounts = Array.from(discoveredAccounts);
+
+        renderAccountTabs();
         refreshAllPrices();
       } catch (err) {
         console.error("KV Read Error:", err);
@@ -358,6 +490,7 @@
     // Add position
     async function addStock(e) {
       e.preventDefault();
+      const targetAccount = document.getElementById("input-account").value || activeAccount;
       const symInput = document.getElementById("input-symbol");
       const qtyInput = document.getElementById("input-qty");
       const priceInput = document.getElementById("input-price");
@@ -374,10 +507,15 @@
 
       holdings.push({
         id: Date.now().toString(),
+        account: targetAccount,
         symbol: symbol,
         bq: bq,
         price: price
       });
+
+      if (!accounts.includes(targetAccount)) {
+        accounts.push(targetAccount);
+      }
 
       await saveToCloud(holdings);
 
@@ -387,8 +525,8 @@
       saveBtn.innerText = "Save Position";
       saveBtn.disabled = false;
       toggleAddForm(false);
-      document.getElementById("holdings-count-badge").innerText = holdings.length;
 
+      selectAccount(targetAccount);
       refreshAllPrices();
     }
 
@@ -397,7 +535,7 @@
       if (!confirm("Delete position?")) return;
       holdings = holdings.filter(item => item.id !== id);
       await saveToCloud(holdings);
-      document.getElementById("holdings-count-badge").innerText = holdings.length;
+      renderAccountTabs();
       refreshAllPrices();
     }
 
@@ -422,11 +560,18 @@
 
       refreshMacroTickers();
 
-      try {
-        const quotes = await Promise.all(holdings.map(h => fetchQuote(h.symbol)));
+      // Get distinct stock symbols to minimize requests
+      const uniqueSymbols = Array.from(new Set(holdings.map(h => h.symbol)));
 
-        computedData = holdings.map((item, idx) => {
-          const q = quotes[idx];
+      try {
+        const quoteResults = await Promise.all(uniqueSymbols.map(s => fetchQuote(s)));
+        const quoteMap = {};
+        uniqueSymbols.forEach((sym, idx) => {
+          quoteMap[sym] = quoteResults[idx];
+        });
+
+        computedData = holdings.map(item => {
+          const q = quoteMap[item.symbol];
           const ltp = q?.ltp || item.price;
           const prevClose = q?.previousClose || ltp;
           const high52 = q?.high52 || 0;
@@ -459,6 +604,7 @@
           };
         });
 
+        renderAccountTabs();
         renderDashboard();
       } catch (err) {
         console.error("Refresh error:", err);
@@ -468,9 +614,13 @@
       }
     }
 
-    // Render Data to Table and Cards
+    // Render Data to Table and Cards (Filtered by Selected Account)
     function renderDashboard() {
-      computedData.sort((a, b) => {
+      // Filter stocks belonging strictly to the selected account tab
+      const accountHoldings = computedData.filter(item => (item.account || DEFAULT_ACCOUNT) === activeAccount);
+      document.getElementById("holdings-count-badge").innerText = accountHoldings.length;
+
+      accountHoldings.sort((a, b) => {
         let valA = a[currentSortCol];
         let valB = b[currentSortCol];
 
@@ -495,7 +645,7 @@
       let desktopHtml = "";
       let mobileHtml = "";
 
-      computedData.forEach((item, i) => {
+      accountHoldings.forEach((item, i) => {
         totalInvested += item.buyValue;
         totalCurrent += item.currValue;
         totalPrevClose += item.prevValue;
@@ -558,21 +708,22 @@
         `;
       });
 
-      document.getElementById("portfolio-body").innerHTML = desktopHtml || `<tr><td colspan="11" class="text-center py-6 text-slate-400 font-sans">No positions found.</td></tr>`;
-      document.getElementById("mobile-cards-container").innerHTML = mobileHtml || `<div class="text-center py-6 text-slate-400 font-sans">No positions found.</div>`;
+      document.getElementById("portfolio-body").innerHTML = desktopHtml || `<tr><td colspan="11" class="text-center py-8 text-slate-400 font-sans">No positions found for account <strong>${activeAccount}</strong>. Click "+ Stock" to add holdings.</td></tr>`;
+      document.getElementById("mobile-cards-container").innerHTML = mobileHtml || `<div class="text-center py-8 text-slate-400 font-sans">No positions found for account <strong>${activeAccount}</strong>.</div>`;
 
       updateKPIs(totalInvested, totalCurrent, totalPrevClose);
-      renderTopMovers();
+      renderTopMovers(accountHoldings);
     }
 
-    // Render Side Panel Top Movers
-    function renderTopMovers() {
-      if (computedData.length === 0) {
-        document.getElementById("top-movers-list").innerHTML = `<div class="text-slate-500">No data</div>`;
+    // Render Side Drawer Top Movers for Active Account
+    function renderTopMovers(accountHoldings) {
+      const container = document.getElementById("top-movers-list");
+      if (!accountHoldings || accountHoldings.length === 0) {
+        container.innerHTML = `<div class="text-slate-500">No positions in this account</div>`;
         return;
       }
       
-      const sortedByToday = [...computedData].sort((a, b) => b.todayPct - a.todayPct);
+      const sortedByToday = [...accountHoldings].sort((a, b) => b.todayPct - a.todayPct);
       const top3 = sortedByToday.slice(0, 3);
       const bottom1 = sortedByToday[sortedByToday.length - 1];
 
@@ -589,14 +740,14 @@
 
       if (bottom1 && bottom1.todayPct < 0) {
         moversHtml += `
-          <div class="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+          <div class="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
             <span class="text-slate-400">Biggest Drag: <strong>${bottom1.symbol}</strong></span>
             <span class="font-mono font-bold text-rose-500">${bottom1.todayPct.toFixed(2)}%</span>
           </div>
         `;
       }
 
-      document.getElementById("top-movers-list").innerHTML = moversHtml;
+      container.innerHTML = moversHtml;
     }
 
     // Update KPI Numbers
@@ -608,6 +759,7 @@
       const totalColor = totalPnl >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400';
       const todayColor = todayPnl >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400';
 
+      // Drawer KPIs
       document.getElementById("kpi-invested").innerText = fmtInr(invested);
       document.getElementById("kpi-current").innerText = fmtInr(current);
 
@@ -625,6 +777,7 @@
 
       document.getElementById("kpi-prev-close").innerText = `Prev: ${fmtInr(prevClose)}`;
 
+      // Mobile Summary Row
       document.getElementById("m-kpi-invested").innerText = fmtInr(invested);
       document.getElementById("m-kpi-current").innerText = fmtInr(current);
 
