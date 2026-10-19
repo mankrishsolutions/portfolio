@@ -37,9 +37,15 @@
           <span id="add-btn-label">Add Stock</span>
         </button>
 
-        <!-- Export / Import Sync Modal Trigger -->
-        <button onclick="toggleSyncModal(true)" title="Sync cross-device" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-xs font-semibold transition-colors">
-          Sync / Cloud Data
+        <!-- Restore from GitHub File -->
+        <button onclick="restoreFromGithub()" title="Reload baseline positions from repository holdings.json" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1">
+          <span>🔄</span>
+          <span>Restore from GitHub</span>
+        </button>
+
+        <!-- Export / Sync Modal Trigger -->
+        <button onclick="toggleSyncModal(true)" title="View JSON to commit back to GitHub" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-xs font-semibold transition-colors">
+          Get GitHub JSON
         </button>
 
         <!-- Dark / Light Theme Toggle -->
@@ -127,26 +133,26 @@
 
   </div>
 
-  <!-- Cross-Device Sync Modal -->
+  <!-- Sync / GitHub JSON Modal -->
   <div id="sync-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-lg w-full p-5 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between">
-        <h3 class="font-bold text-sm text-slate-900 dark:text-slate-100">Permanent Cross-Device Sync</h3>
+        <h3 class="font-bold text-sm text-slate-900 dark:text-slate-100">Sync with GitHub holdings.json</h3>
         <button onclick="toggleSyncModal(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-        Browsers do not share local memory across devices automatically. Copy your portfolio data below to open or update it on your other phone or computer.
+        Whenever you add or delete stocks locally, click <strong>Copy JSON</strong> below and paste it into your repository's <code>holdings.json</code> on GitHub. That will update your source of truth for all devices.
       </p>
       <div>
-        <label class="text-[11px] font-semibold text-slate-400 uppercase">Current Holdings JSON</label>
-        <textarea id="sync-data-box" rows="5" class="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg p-2 font-mono text-xs text-slate-800 dark:text-slate-200 focus:outline-none"></textarea>
+        <label class="text-[11px] font-semibold text-slate-400 uppercase">Holdings Data</label>
+        <textarea id="sync-data-box" rows="6" class="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg p-2 font-mono text-xs text-slate-800 dark:text-slate-200 focus:outline-none"></textarea>
       </div>
       <div class="flex gap-2">
-        <button onclick="importPortfolioData()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 rounded-lg transition-colors">
-          Import & Save
+        <button onclick="copySyncData()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 rounded-lg transition-colors">
+          Copy JSON
         </button>
-        <button onclick="copySyncData()" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-semibold px-4 py-2 rounded-lg transition-colors">
-          Copy
+        <button onclick="importPortfolioData()" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-semibold px-4 py-2 rounded-lg transition-colors">
+          Apply Manually
         </button>
       </div>
     </div>
@@ -154,13 +160,14 @@
 
   <script>
     const WORKER_BASE = "https://tickerprice.mankrishsolutions.workers.dev";
-    const STORAGE_KEY = "my_cross_device_portfolio_holdings";
+    const GITHUB_JSON_FILE = "./holdings.json"; // Relative path inside the same GitHub repo
+    const STORAGE_KEY = "my_github_synced_portfolio_holdings";
     const THEME_KEY = "portfolio_theme_mode";
 
     let isFetching = false;
     let autoRefreshInterval = null;
 
-    // Load Initial Theme
+    // Theme Management
     function initTheme() {
       const savedTheme = localStorage.getItem(THEME_KEY) || "dark";
       if (savedTheme === "dark") {
@@ -178,7 +185,7 @@
       document.getElementById("theme-icon").innerText = isDark ? "☀️ Light" : "🌙 Dark";
     }
 
-    // Toggle Add Stock Form visibility
+    // Toggle Add Stock Form
     function toggleAddStockForm(forceState) {
       const panel = document.getElementById("add-stock-panel");
       const icon = document.getElementById("add-btn-icon");
@@ -198,21 +205,33 @@
       }
     }
 
-    // Get Holdings (Preserves your custom added stocks across reloads)
+    // Fetch Holdings from GitHub repository holdings.json
+    async function restoreFromGithub(silent = false) {
+      try {
+        // Cache-busting query param ensures fresh data on every device
+        const response = await fetch(`${GITHUB_JSON_FILE}?t=${Date.now()}`);
+        if (!response.ok) throw new Error("Could not find holdings.json in repo");
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          saveStoredHoldings(data);
+          if (!silent) alert("Successfully restored holdings from GitHub repository!");
+          refreshAllPrices();
+          return true;
+        }
+      } catch (err) {
+        if (!silent) alert("Failed to fetch holdings.json from repo. Check if the file exists.");
+      }
+      return false;
+    }
+
+    // Storage accessors
     function getStoredHoldings() {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) {
-        const defaults = [
-          { id: "1", symbol: "HBLENGINE", bq: 70, price: 412.57 },
-          { id: "2", symbol: "DHOOTTRANS", bq: 7, price: 871.00 }
-        ];
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
-        return defaults;
-      }
+      if (!saved) return null;
       try {
         return JSON.parse(saved);
       } catch (e) {
-        return [];
+        return null;
       }
     }
 
@@ -220,11 +239,10 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
 
-    // Formatters
     const fmtInr = (n) => "₹" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const fmtVol = (n) => n > 100000 ? (n / 100000).toFixed(2) + " L" : Number(n).toLocaleString("en-IN");
 
-    // Fetch quote from Cloudflare Worker
+    // Cloudflare Worker Fetch
     async function fetchQuote(symbol) {
       try {
         const res = await fetch(`${WORKER_BASE}/?symbol=${encodeURIComponent(symbol)}`);
@@ -248,7 +266,7 @@
 
       if (!symbol || isNaN(bq) || isNaN(price)) return;
 
-      const holdings = getStoredHoldings();
+      const holdings = getStoredHoldings() || [];
       holdings.push({
         id: Date.now().toString(),
         symbol: symbol,
@@ -268,13 +286,13 @@
 
     // Remove Stock
     function removeStock(id) {
-      let holdings = getStoredHoldings();
+      let holdings = getStoredHoldings() || [];
       holdings = holdings.filter(item => item.id !== id);
       saveStoredHoldings(holdings);
       refreshAllPrices();
     }
 
-    // Update Dashboard Data
+    // Refresh All Prices
     async function refreshAllPrices() {
       if (isFetching) return;
       isFetching = true;
@@ -284,21 +302,19 @@
       indicator.classList.add("bg-emerald-500", "animate-ping");
 
       const tbody = document.getElementById("portfolio-body");
-      const holdings = getStoredHoldings();
+      const holdings = getStoredHoldings() || [];
 
       if (holdings.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="14" class="text-center py-8 text-slate-400 font-sans">No stocks added. Click "+ Add Stock" to start.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="14" class="text-center py-8 text-slate-400 font-sans">No stocks found. Click "Restore from GitHub" or "+ Add Stock".</td></tr>`;
         updateKPIs(0, 0, 0);
         finishRefresh();
         return;
       }
 
-      // Async fetch NIFTY
       fetchQuote("NIFTY_50").then(d => {
         if (d && d.ltp) document.getElementById("idx-nifty").innerText = d.ltp.toLocaleString("en-IN");
       });
 
-      // Parallel batch fetch for holdings
       try {
         const quotes = await Promise.all(holdings.map(h => fetchQuote(h.symbol)));
 
@@ -359,7 +375,7 @@
         tbody.innerHTML = rowsHtml;
         updateKPIs(totalInvested, totalCurrent, totalPrevClose);
       } catch (err) {
-        console.error("Update failed", err);
+        console.error("Fetch failed", err);
       } finally {
         finishRefresh();
       }
@@ -405,11 +421,11 @@
       }
     }
 
-    // Sync / Modal Tools
+    // Sync Tools
     function toggleSyncModal(show) {
       const modal = document.getElementById("sync-modal");
       if (show) {
-        document.getElementById("sync-data-box").value = JSON.stringify(getStoredHoldings(), null, 2);
+        document.getElementById("sync-data-box").value = JSON.stringify(getStoredHoldings() || [], null, 2);
         modal.classList.remove("hidden");
         modal.classList.add("flex");
       } else {
@@ -422,7 +438,7 @@
       const box = document.getElementById("sync-data-box");
       box.select();
       navigator.clipboard.writeText(box.value);
-      alert("Holdings copied to clipboard! Paste it on your other device.");
+      alert("JSON copied! Commit this into your repository holdings.json to sync all devices.");
     }
 
     function importPortfolioData() {
@@ -432,15 +448,22 @@
         saveStoredHoldings(data);
         toggleSyncModal(false);
         refreshAllPrices();
-        alert("Holdings successfully imported!");
       } catch (e) {
-        alert("Invalid JSON format. Please paste valid holdings JSON.");
+        alert("Invalid JSON format.");
       }
     }
 
-    // App Initialization
+    // Bootstrap app
     initTheme();
-    refreshAllPrices();
+    (async function init() {
+      const localData = getStoredHoldings();
+      if (!localData || localData.length === 0) {
+        // If device has no local data yet, automatically restore from GitHub holdings.json
+        await restoreFromGithub(true);
+      } else {
+        refreshAllPrices();
+      }
+    })();
   </script>
 </body>
 </html>
