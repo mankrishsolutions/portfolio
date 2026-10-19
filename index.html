@@ -37,15 +37,9 @@
           <span id="add-btn-label">Add Stock</span>
         </button>
 
-        <!-- Restore from GitHub File -->
-        <button onclick="restoreFromGithub()" title="Reload baseline positions from repository holdings.json" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1">
-          <span>🔄</span>
-          <span>Restore from GitHub</span>
-        </button>
-
-        <!-- Export / Sync Modal Trigger -->
-        <button onclick="toggleSyncModal(true)" title="View JSON to commit back to GitHub" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-xs font-semibold transition-colors">
-          Get GitHub JSON
+        <!-- Force Cloud Sync -->
+        <button onclick="syncFromCloud()" title="Reload from Cloudflare KV" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-xs font-semibold transition-colors">
+          ☁️ Sync Cloud
         </button>
 
         <!-- Dark / Light Theme Toggle -->
@@ -74,7 +68,7 @@
           <input type="number" id="input-price" placeholder="Buy Price (₹)" min="0.01" step="0.01" required
             class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500">
         </div>
-        <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg text-sm shadow transition-colors">
+        <button type="submit" id="save-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg text-sm shadow transition-colors">
           Save Position
         </button>
       </form>
@@ -133,37 +127,11 @@
 
   </div>
 
-  <!-- Sync / GitHub JSON Modal -->
-  <div id="sync-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-lg w-full p-5 space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between">
-        <h3 class="font-bold text-sm text-slate-900 dark:text-slate-100">Sync with GitHub holdings.json</h3>
-        <button onclick="toggleSyncModal(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
-      </div>
-      <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-        Whenever you add or delete stocks locally, click <strong>Copy JSON</strong> below and paste it into your repository's <code>holdings.json</code> on GitHub. That will update your source of truth for all devices.
-      </p>
-      <div>
-        <label class="text-[11px] font-semibold text-slate-400 uppercase">Holdings Data</label>
-        <textarea id="sync-data-box" rows="6" class="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg p-2 font-mono text-xs text-slate-800 dark:text-slate-200 focus:outline-none"></textarea>
-      </div>
-      <div class="flex gap-2">
-        <button onclick="copySyncData()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 rounded-lg transition-colors">
-          Copy JSON
-        </button>
-        <button onclick="importPortfolioData()" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-semibold px-4 py-2 rounded-lg transition-colors">
-          Apply Manually
-        </button>
-      </div>
-    </div>
-  </div>
-
   <script>
     const WORKER_BASE = "https://tickerprice.mankrishsolutions.workers.dev";
-    const GITHUB_JSON_FILE = "./holdings.json"; // Relative path inside the same GitHub repo
-    const STORAGE_KEY = "my_github_synced_portfolio_holdings";
     const THEME_KEY = "portfolio_theme_mode";
 
+    let holdings = [];
     let isFetching = false;
     let autoRefreshInterval = null;
 
@@ -205,44 +173,35 @@
       }
     }
 
-    // Fetch Holdings from GitHub repository holdings.json
-    async function restoreFromGithub(silent = false) {
+    // Load Holdings from Cloudflare KV
+    async function syncFromCloud() {
       try {
-        // Cache-busting query param ensures fresh data on every device
-        const response = await fetch(`${GITHUB_JSON_FILE}?t=${Date.now()}`);
-        if (!response.ok) throw new Error("Could not find holdings.json in repo");
-        const data = await response.json();
-        if (Array.isArray(data) && data.length > 0) {
-          saveStoredHoldings(data);
-          if (!silent) alert("Successfully restored holdings from GitHub repository!");
-          refreshAllPrices();
-          return true;
-        }
+        const res = await fetch(`${WORKER_BASE}/holdings?t=${Date.now()}`);
+        if (!res.ok) throw new Error("Cloud fetch failed");
+        holdings = await res.json();
+        refreshAllPrices();
       } catch (err) {
-        if (!silent) alert("Failed to fetch holdings.json from repo. Check if the file exists.");
+        console.error("Failed to load holdings from Cloud:", err);
       }
-      return false;
     }
 
-    // Storage accessors
-    function getStoredHoldings() {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return null;
+    // Save Holdings to Cloudflare KV
+    async function saveToCloud(updatedHoldings) {
       try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return null;
+        await fetch(`${WORKER_BASE}/holdings`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedHoldings)
+        });
+      } catch (err) {
+        alert("Failed to save to cloud database. Please verify worker KV binding.");
       }
-    }
-
-    function saveStoredHoldings(data) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
 
     const fmtInr = (n) => "₹" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const fmtVol = (n) => n > 100000 ? (n / 100000).toFixed(2) + " L" : Number(n).toLocaleString("en-IN");
 
-    // Cloudflare Worker Fetch
+    // Fetch quote from Cloudflare Worker
     async function fetchQuote(symbol) {
       try {
         const res = await fetch(`${WORKER_BASE}/?symbol=${encodeURIComponent(symbol)}`);
@@ -254,11 +213,12 @@
     }
 
     // Add Stock
-    function addStock(e) {
+    async function addStock(e) {
       e.preventDefault();
       const symInput = document.getElementById("input-symbol");
       const qtyInput = document.getElementById("input-qty");
       const priceInput = document.getElementById("input-price");
+      const saveBtn = document.getElementById("save-btn");
 
       const symbol = symInput.value.trim().toUpperCase();
       const bq = parseFloat(qtyInput.value);
@@ -266,7 +226,9 @@
 
       if (!symbol || isNaN(bq) || isNaN(price)) return;
 
-      const holdings = getStoredHoldings() || [];
+      saveBtn.innerText = "Saving...";
+      saveBtn.disabled = true;
+
       holdings.push({
         id: Date.now().toString(),
         symbol: symbol,
@@ -274,25 +236,26 @@
         price: price
       });
 
-      saveStoredHoldings(holdings);
+      await saveToCloud(holdings);
 
       symInput.value = "";
       qtyInput.value = "";
       priceInput.value = "";
+      saveBtn.innerText = "Save Position";
+      saveBtn.disabled = false;
       toggleAddStockForm(false);
 
       refreshAllPrices();
     }
 
     // Remove Stock
-    function removeStock(id) {
-      let holdings = getStoredHoldings() || [];
+    async function removeStock(id) {
       holdings = holdings.filter(item => item.id !== id);
-      saveStoredHoldings(holdings);
+      await saveToCloud(holdings);
       refreshAllPrices();
     }
 
-    // Refresh All Prices
+    // Refresh Dashboard Prices
     async function refreshAllPrices() {
       if (isFetching) return;
       isFetching = true;
@@ -302,10 +265,9 @@
       indicator.classList.add("bg-emerald-500", "animate-ping");
 
       const tbody = document.getElementById("portfolio-body");
-      const holdings = getStoredHoldings() || [];
 
       if (holdings.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="14" class="text-center py-8 text-slate-400 font-sans">No stocks found. Click "Restore from GitHub" or "+ Add Stock".</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="14" class="text-center py-8 text-slate-400 font-sans">No stocks found. Click "+ Add Stock" to start.</td></tr>`;
         updateKPIs(0, 0, 0);
         finishRefresh();
         return;
@@ -375,7 +337,7 @@
         tbody.innerHTML = rowsHtml;
         updateKPIs(totalInvested, totalCurrent, totalPrevClose);
       } catch (err) {
-        console.error("Fetch failed", err);
+        console.error("Dashboard update failed", err);
       } finally {
         finishRefresh();
       }
@@ -421,49 +383,9 @@
       }
     }
 
-    // Sync Tools
-    function toggleSyncModal(show) {
-      const modal = document.getElementById("sync-modal");
-      if (show) {
-        document.getElementById("sync-data-box").value = JSON.stringify(getStoredHoldings() || [], null, 2);
-        modal.classList.remove("hidden");
-        modal.classList.add("flex");
-      } else {
-        modal.classList.add("hidden");
-        modal.classList.remove("flex");
-      }
-    }
-
-    function copySyncData() {
-      const box = document.getElementById("sync-data-box");
-      box.select();
-      navigator.clipboard.writeText(box.value);
-      alert("JSON copied! Commit this into your repository holdings.json to sync all devices.");
-    }
-
-    function importPortfolioData() {
-      try {
-        const data = JSON.parse(document.getElementById("sync-data-box").value);
-        if (!Array.isArray(data)) throw new Error("Invalid format");
-        saveStoredHoldings(data);
-        toggleSyncModal(false);
-        refreshAllPrices();
-      } catch (e) {
-        alert("Invalid JSON format.");
-      }
-    }
-
-    // Bootstrap app
+    // App Initialization
     initTheme();
-    (async function init() {
-      const localData = getStoredHoldings();
-      if (!localData || localData.length === 0) {
-        // If device has no local data yet, automatically restore from GitHub holdings.json
-        await restoreFromGithub(true);
-      } else {
-        refreshAllPrices();
-      }
-    })();
+    syncFromCloud();
   </script>
 </body>
 </html>
