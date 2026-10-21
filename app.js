@@ -774,7 +774,7 @@ function updateKPIs(invested, current, prevClose) {
 function toggleAutoRefresh(start) {
     if (start) {
         refreshAllPrices();
-        autoRefreshInterval = setInterval(refreshAllPrices, 1000);
+        autoRefreshInterval = setInterval(refreshAllPrices, 5000);
     } else {
         if (autoRefreshInterval) clearInterval(autoRefreshInterval);
     }
