@@ -15,7 +15,7 @@ let autoRefreshInterval = null;
 let currentSortCol = 'totalDiff';
 let currentSortAsc = false;
 
-// 4. Save and Apply View Settings
+// Save and Apply View Settings
 function saveViewSettings() {
     localStorage.setItem(VIEW_MODE_KEY, currentViewMode);
     if (activeAccount) {
@@ -442,6 +442,7 @@ async function refreshAllPrices() {
 
             const totalDiff = currValue - buyValue;
             const totalPct = (totalDiff / buyValue) * 100;
+            const todayDiff = ltp - prevClose;
             const todayPct = ((ltp - prevClose) / prevClose) * 100;
             const from52Pct = high52 > 0 ? ((ltp - high52) / high52) * 100 : 0;
 
@@ -457,6 +458,7 @@ async function refreshAllPrices() {
                 prevValue,
                 totalDiff,
                 totalPct,
+                todayDiff,
                 todayPct,
                 from52Pct
             };
@@ -476,7 +478,7 @@ async function refreshAllPrices() {
     }
 }
 
-// 3. Render Consolidated Overview & Interactive Account Cards
+// Render Consolidated Overview, Account Cards, and Side-by-Side Movers & Losers
 function renderConsolidatedCards() {
     let grandInvested = 0;
     let grandCurrent = 0;
@@ -561,6 +563,86 @@ function renderConsolidatedCards() {
     cTodayElem.className = `font-black text-base sm:text-lg mt-0.5 ${grandTodayColor}`;
 
     document.getElementById("account-cards-grid").innerHTML = cardsHtml || `<div class="col-span-4 text-center py-6 text-slate-400">No accounts created.</div>`;
+
+    // Render Consolidated Top Gainers and Losers
+    renderConsolidatedMoversAndLosers();
+}
+
+// Side-by-Side Top Gainers and Top Losers Across All Holdings
+function renderConsolidatedMoversAndLosers() {
+    const gainersContainer = document.getElementById("consolidated-top-gainers");
+    const losersContainer = document.getElementById("consolidated-top-losers");
+
+    if (!computedData || computedData.length === 0) {
+        gainersContainer.innerHTML = `<div class="text-slate-400 py-2">No stocks found.</div>`;
+        losersContainer.innerHTML = `<div class="text-slate-400 py-2">No stocks found.</div>`;
+        return;
+    }
+
+    // Sorted list copy
+    const sortedDesc = [...computedData].sort((a, b) => b.todayPct - a.todayPct);
+
+    // Top 5 Gainers (highest todayPct)
+    const topGainers = sortedDesc.slice(0, 5);
+
+    // Top 5 Losers (lowest todayPct)
+    const topLosers = [...computedData].sort((a, b) => a.todayPct - b.todayPct).slice(0, 5);
+
+    // Render Gainers List
+    let gainersHtml = "";
+    topGainers.forEach((s, idx) => {
+        const isPos = s.todayPct >= 0;
+        const diffSign = s.todayDiff >= 0 ? "+" : "";
+        gainersHtml += `
+      <div onclick="selectAccount('${s.account}')" class="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-emerald-500/50 cursor-pointer transition">
+        <div class="flex items-center gap-2">
+          <span class="text-slate-400 text-[10px] w-3">${idx + 1}</span>
+          <div>
+            <div class="font-sans font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+              <span>${s.symbol}</span>
+              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 font-normal">${s.account}</span>
+            </div>
+            <div class="text-[10px] text-slate-400">LTP ₹${s.ltp.toFixed(2)}</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="font-bold text-emerald-500 dark:text-emerald-400 text-xs">
+            ${isPos ? '+' : ''}${s.todayPct.toFixed(2)}%
+          </div>
+          <div class="text-[10px] text-slate-400">${diffSign}${s.todayDiff.toFixed(2)}</div>
+        </div>
+      </div>
+    `;
+    });
+    gainersContainer.innerHTML = gainersHtml;
+
+    // Render Losers List
+    let losersHtml = "";
+    topLosers.forEach((s, idx) => {
+        const isNeg = s.todayPct < 0;
+        const diffSign = s.todayDiff >= 0 ? "+" : "";
+        losersHtml += `
+      <div onclick="selectAccount('${s.account}')" class="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-rose-500/50 cursor-pointer transition">
+        <div class="flex items-center gap-2">
+          <span class="text-slate-400 text-[10px] w-3">${idx + 1}</span>
+          <div>
+            <div class="font-sans font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+              <span>${s.symbol}</span>
+              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 font-normal">${s.account}</span>
+            </div>
+            <div class="text-[10px] text-slate-400">LTP ₹${s.ltp.toFixed(2)}</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="font-bold text-rose-500 dark:text-rose-400 text-xs">
+            ${s.todayPct.toFixed(2)}%
+          </div>
+          <div class="text-[10px] text-slate-400">${diffSign}${s.todayDiff.toFixed(2)}</div>
+        </div>
+      </div>
+    `;
+    });
+    losersContainer.innerHTML = losersHtml;
 }
 
 // Render Holdings Table for Active Account
@@ -659,42 +741,6 @@ function renderDashboard() {
     document.getElementById("mobile-cards-container").innerHTML = mobileHtml || `<div class="text-center py-8 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>.</div>`;
 
     updateKPIs(totalInvested, totalCurrent, totalPrevClose);
-    renderTopMovers(accountHoldings);
-}
-
-// Side Drawer Top Movers
-function renderTopMovers(accountHoldings) {
-    const container = document.getElementById("top-movers-list");
-    if (!accountHoldings || accountHoldings.length === 0) {
-        container.innerHTML = `<div class="text-slate-500">No positions in this account</div>`;
-        return;
-    }
-
-    const sortedByToday = [...accountHoldings].sort((a, b) => b.todayPct - a.todayPct);
-    const top3 = sortedByToday.slice(0, 3);
-    const bottom1 = sortedByToday[sortedByToday.length - 1];
-
-    let moversHtml = "";
-    top3.forEach(s => {
-        const isPos = s.todayPct >= 0;
-        moversHtml += `
-      <div class="flex items-center justify-between">
-        <span class="font-bold text-slate-800 dark:text-slate-200">${s.symbol}</span>
-        <span class="font-mono font-bold ${isPos ? 'text-emerald-500' : 'text-rose-500'}">${isPos ? '+' : ''}${s.todayPct.toFixed(2)}%</span>
-      </div>
-    `;
-    });
-
-    if (bottom1 && bottom1.todayPct < 0) {
-        moversHtml += `
-      <div class="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-        <span class="text-slate-400">Biggest Drag: <strong>${bottom1.symbol}</strong></span>
-        <span class="font-mono font-bold text-rose-500">${bottom1.todayPct.toFixed(2)}%</span>
-      </div>
-    `;
-    }
-
-    container.innerHTML = moversHtml;
 }
 
 // Update Drawer KPIs

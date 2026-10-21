@@ -74,12 +74,6 @@
                 <div id="kpi-today-pnl" class="text-base font-extrabold text-right">₹0.00</div>
             </div>
         </div>
-
-        <!-- Top Movers Widget -->
-        <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 space-y-3">
-            <h3 class="font-bold text-xs uppercase tracking-wider text-slate-400">Top Movers (Today)</h3>
-            <div id="top-movers-list" class="space-y-2 text-xs"></div>
-        </div>
     </aside>
 
     <div class="max-w-[1750px] mx-auto space-y-3">
@@ -139,7 +133,6 @@
 
             <!-- Action Controls -->
             <div class="flex items-center gap-2">
-                <!-- 2. Sync Button Outside With Icon Only -->
                 <button onclick="syncFromCloud()" title="Sync live quotes & cloud data" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 transition">
                     <span class="text-sm">🔄</span>
                 </button>
@@ -159,9 +152,7 @@
                         <span class="text-[9px]">▼</span>
                     </button>
 
-                    <!-- Dropdown Options -->
                     <div id="settings-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl py-1.5 z-50 text-xs divide-y divide-slate-100 dark:divide-slate-800">
-                        <!-- 1. Add Stock Moved Inside Tools Dropdown -->
                         <div class="py-1">
                             <button onclick="toggleAddForm(true); toggleSettingsMenu(false);" class="w-full text-left px-3 py-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-2">
                                 <span>➕</span>
@@ -194,7 +185,7 @@
             </div>
         </header>
 
-        <!-- 3. DEFAULT VIEW: Consolidated All-Accounts Portfolio Dashboard -->
+        <!-- DEFAULT CONSOLIDATED VIEW -->
         <section id="consolidated-section" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div class="flex items-center gap-2.5">
@@ -229,11 +220,40 @@
                 </div>
             </div>
 
-            <!-- Account Contribution Grid / Selection Cards -->
+            <!-- Account Contribution Cards Grid -->
             <div>
                 <h3 class="text-xs uppercase font-bold text-slate-400 tracking-wider mb-2.5">Your Accounts (Click to inspect holdings)</h3>
-                <div id="account-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <!-- Injected dynamically -->
+                <div id="account-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+            </div>
+
+            <!-- SIDE-BY-SIDE: Top Movers (Left) vs Top Losers (Right) Across All Accounts -->
+            <div class="pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <!-- LEFT CARD: Top Movers / Gainers -->
+                    <div class="bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-2.5">
+                        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-sm">🚀</span>
+                                <h4 class="font-extrabold text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Top Gainers (Today)</h4>
+                            </div>
+                            <span class="text-[10px] text-slate-400 font-mono">By % Change</span>
+                        </div>
+                        <div id="consolidated-top-gainers" class="space-y-1.5 font-mono text-xs"></div>
+                    </div>
+
+                    <!-- RIGHT CARD: Top Losers / Drags -->
+                    <div class="bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-2.5">
+                        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-sm">📉</span>
+                                <h4 class="font-extrabold text-xs uppercase tracking-wider text-rose-600 dark:text-rose-400">Top Losers (Today)</h4>
+                            </div>
+                            <span class="text-[10px] text-slate-400 font-mono">By % Change</span>
+                        </div>
+                        <div id="consolidated-top-losers" class="space-y-1.5 font-mono text-xs"></div>
+                    </div>
+
                 </div>
             </div>
         </section>
@@ -264,21 +284,18 @@
             </form>
         </div>
 
-        <!-- Specific Account Holdings View (Shown when an account is selected) -->
+        <!-- Specific Account Holdings View -->
         <div id="holdings-section" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
 
             <!-- Account Header Bar -->
             <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-2">
-                    <!-- Back to Consolidated View Button -->
                     <button onclick="showConsolidatedDefaultView()" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs flex items-center gap-1 transition">
                         <span>←</span> All Accounts
                     </button>
 
-                    <!-- Account Tabs -->
                     <div id="account-tabs-container" class="flex flex-wrap items-center gap-1.5"></div>
 
-                    <!-- Account Action Tools -->
                     <div class="flex items-center gap-1.5">
                         <button onclick="promptAddAccount()" title="Create another account" class="px-2 py-1 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-semibold text-xs transition">
                             + Account
