@@ -1,0 +1,236 @@
+{
+  "exportedAt": "2026-10-21T06:01:25.650Z",
+  "accounts": [
+    "VP6474",
+    "VP5769",
+    "BHATIA",
+    "KR"
+  ],
+  "totalPositions": 32,
+  "holdings": [
+    {
+      "id": "1",
+      "symbol": "HBLENGINE",
+      "bq": 70,
+      "price": 412.57,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792391260735",
+      "symbol": "RELIANCE",
+      "bq": 36,
+      "price": 1347.81,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792391277863",
+      "symbol": "RBA",
+      "bq": 36,
+      "price": 162.5,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792391844638",
+      "symbol": "TEMBO",
+      "bq": 151,
+      "price": 58,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792391861901",
+      "symbol": "IREDA",
+      "bq": 101,
+      "price": 253.95,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792391873958",
+      "symbol": "ETERNAL",
+      "bq": 211,
+      "price": 178.01,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792391883869",
+      "symbol": "GKWLIMITED",
+      "bq": 3,
+      "price": 3719.22,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792391892406",
+      "symbol": "CDSL",
+      "bq": 10,
+      "price": 1365,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792391952925",
+      "symbol": "TRIDENT",
+      "bq": 1321,
+      "price": 29.72,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792392905188",
+      "symbol": "AZAD",
+      "bq": 60,
+      "price": 1256.78,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792392945307",
+      "symbol": "RVNL",
+      "bq": 21,
+      "price": 495,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792392972579",
+      "symbol": "VIKRAN",
+      "bq": 76,
+      "price": 73.7,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792392983867",
+      "symbol": "SIGACHI",
+      "bq": 373,
+      "price": 64.7,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792392994779",
+      "symbol": "ELECTCAST",
+      "bq": 51,
+      "price": 100.25,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792393006243",
+      "symbol": "SWANCORP",
+      "bq": 37,
+      "price": 768.5,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792393023411",
+      "symbol": "IFCI",
+      "bq": 100,
+      "price": 99.96,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792393033283",
+      "symbol": "CUPID",
+      "bq": 518,
+      "price": 54.32,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792393048691",
+      "symbol": "PROTEAN",
+      "bq": 12,
+      "price": 1035,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792393058555",
+      "symbol": "FRACTAL",
+      "bq": 39,
+      "price": 1019.5,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792393067371",
+      "symbol": "LXCHEM",
+      "bq": 40,
+      "price": 589,
+      "account": "VP6474"
+    },
+    {
+      "id": "1792405050189",
+      "account": "VP5769",
+      "symbol": "FORCEMOT",
+      "bq": 18,
+      "price": 3282.09
+    },
+    {
+      "id": "1792405064597",
+      "account": "VP5769",
+      "symbol": "HSCL",
+      "bq": 295,
+      "price": 166.05
+    },
+    {
+      "id": "1792405088965",
+      "account": "VP5769",
+      "symbol": "GROWW",
+      "bq": 165,
+      "price": 108.92
+    },
+    {
+      "id": "1792405130301",
+      "account": "VP5769",
+      "symbol": "TATSILV",
+      "bq": 342,
+      "price": 23
+    },
+    {
+      "id": "1792405140381",
+      "account": "VP5769",
+      "symbol": "TATAGOLD",
+      "bq": 541,
+      "price": 14.58
+    },
+    {
+      "id": "1792405167093",
+      "account": "VP5769",
+      "symbol": "BANDHANBNK",
+      "bq": 38,
+      "price": 696.09
+    },
+    {
+      "id": "1792405177805",
+      "account": "VP5769",
+      "symbol": "INDOSTAR",
+      "bq": 26,
+      "price": 572
+    },
+    {
+      "id": "1792405190765",
+      "account": "VP5769",
+      "symbol": "KNACK",
+      "bq": 12,
+      "price": 170
+    },
+    {
+      "id": "1792405199957",
+      "account": "VP5769",
+      "symbol": "RELIANCE",
+      "bq": 1,
+      "price": 1300
+    },
+    {
+      "id": "1792405295870",
+      "account": "BHATIA",
+      "symbol": "ETERNAL",
+      "bq": 318,
+      "price": 145.31
+    },
+    {
+      "id": "1792405307317",
+      "account": "BHATIA",
+      "symbol": "RBA",
+      "bq": 26,
+      "price": 162.3
+    },
+    {
+      "id": "1792406816875",
+      "account": "KR",
+      "symbol": "DHOOTTRANS",
+      "bq": 7,
+      "price": 871
+    }
+  ]
+}
