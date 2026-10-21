@@ -1,18 +1,20 @@
 /* Compact scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 4px;
+    width: 6px;
+    height: 6px;
 }
 
-/* Clickable sort headers */
+::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 4px;
+}
+
+/* Clickable table sort headers */
 .th-sort {
-  cursor: pointer;
-  user-select: none;
+    cursor: pointer;
+    user-select: none;
 }
-.th-sort:hover {
-  color: #6366f1;
-}
+
+    .th-sort:hover {
+        color: #6366f1;
+    }
