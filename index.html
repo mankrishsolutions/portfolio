@@ -187,6 +187,7 @@
 
         <!-- DEFAULT CONSOLIDATED VIEW -->
         <section id="consolidated-section" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
+
             <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div class="flex items-center gap-2.5">
                     <span class="text-xl">🏛️</span>
@@ -195,35 +196,6 @@
                         <p class="text-xs text-slate-400">Total portfolio performance overview across all accounts</p>
                     </div>
                 </div>
-            </div>
-
-            <!-- High-Level Consolidated KPI Strip -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
-                    <span class="text-[10px] uppercase font-bold text-slate-400">Total Invested</span>
-                    <div id="c-kpi-invested" class="font-black text-base sm:text-lg text-slate-900 dark:text-white mt-0.5">₹0.00</div>
-                </div>
-                <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
-                    <span class="text-[10px] uppercase font-bold text-slate-400">Current Valuation</span>
-                    <div id="c-kpi-current" class="font-black text-base sm:text-lg text-slate-900 dark:text-white mt-0.5">₹0.00</div>
-                </div>
-                <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
-                    <div class="flex items-center justify-between">
-                        <span class="text-[10px] uppercase font-bold text-slate-400">Total Net Return</span>
-                        <span id="c-kpi-total-pct" class="text-[11px] font-bold">0.00%</span>
-                    </div>
-                    <div id="c-kpi-total-pnl" class="font-black text-base sm:text-lg mt-0.5">₹0.00</div>
-                </div>
-                <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
-                    <span class="text-[10px] uppercase font-bold text-slate-400">Day's P&L</span>
-                    <div id="c-kpi-today-pnl" class="font-black text-base sm:text-lg mt-0.5">₹0.00</div>
-                </div>
-            </div>
-
-            <!-- Account Contribution Cards Grid -->
-            <div>
-                <h3 class="text-xs uppercase font-bold text-slate-400 tracking-wider mb-2.5">Your Accounts (Click to inspect holdings)</h3>
-                <div id="account-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
             </div>
 
             <!-- SIDE-BY-SIDE: Top Movers (Left) vs Top Losers (Right) Across All Accounts -->
@@ -256,6 +228,38 @@
 
                 </div>
             </div>
+
+            <!-- High-Level Consolidated KPI Strip -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Total Invested</span>
+                    <div id="c-kpi-invested" class="font-black text-base sm:text-lg text-slate-900 dark:text-white mt-0.5">₹0.00</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Current Valuation</span>
+                    <div id="c-kpi-current" class="font-black text-base sm:text-lg text-slate-900 dark:text-white mt-0.5">₹0.00</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] uppercase font-bold text-slate-400">Total Net Return</span>
+                        <span id="c-kpi-total-pct" class="text-[11px] font-bold">0.00%</span>
+                    </div>
+                    <div id="c-kpi-total-pnl" class="font-black text-base sm:text-lg mt-0.5">₹0.00</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Day's P&L</span>
+                    <div id="c-kpi-today-pnl" class="font-black text-base sm:text-lg mt-0.5">₹0.00</div>
+                </div>
+            </div>
+
+
+            <!-- Account Contribution Cards Grid -->
+            <div>
+                <h3 class="text-xs uppercase font-bold text-slate-400 tracking-wider mb-2.5">Your Accounts (Click to inspect holdings)</h3>
+                <div id="account-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+            </div>
+
+
         </section>
 
         <!-- Hidden Add Position Drawer -->
