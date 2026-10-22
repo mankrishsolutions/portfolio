@@ -3,6 +3,9 @@ const THEME_KEY = "portfolio_theme_mode";
 const VIEW_MODE_KEY = "portfolio_last_view_mode"; // 'CONSOLIDATED' or 'ACCOUNT'
 const LAST_ACCOUNT_KEY = "portfolio_last_selected_account";
 
+// 4. Distinct Account Avatars / Icons
+const ACCOUNT_ICONS = ["💼", "🏦", "🪙", "💳", "📊", "🏛️", "💰", "💎"];
+
 let holdings = [];
 let accounts = [];
 let activeAccount = "";
@@ -15,7 +18,14 @@ let autoRefreshInterval = null;
 let currentSortCol = 'totalDiff';
 let currentSortAsc = false;
 
-// Save and Apply View Settings
+// Get distinct icon per account index
+function getAccountIcon(accName) {
+    const index = accounts.indexOf(accName);
+    if (index === -1) return "💼";
+    return ACCOUNT_ICONS[index % ACCOUNT_ICONS.length];
+}
+
+// Save & Restore View Settings
 function saveViewSettings() {
     localStorage.setItem(VIEW_MODE_KEY, currentViewMode);
     if (activeAccount) {
@@ -34,7 +44,7 @@ function loadViewSettings() {
     }
 }
 
-// Show Consolidated Overview (Hides detail table)
+// Show Consolidated Overview
 function showConsolidatedDefaultView() {
     currentViewMode = "CONSOLIDATED";
     saveViewSettings();
@@ -44,7 +54,7 @@ function showConsolidatedDefaultView() {
     renderConsolidatedCards();
 }
 
-// Show Specific Account Holdings (Hides consolidated cards)
+// Show Specific Account Holdings
 function showAccountHoldingsView() {
     currentViewMode = "ACCOUNT";
     saveViewSettings();
@@ -64,7 +74,6 @@ function toggleSettingsMenu(forceState) {
     }
 }
 
-// Close settings dropdown when clicking outside
 document.addEventListener("click", function (e) {
     const btn = document.getElementById("btn-settings-menu");
     const menu = document.getElementById("settings-dropdown");
@@ -212,7 +221,7 @@ async function deleteActiveAccount() {
     renderAccountTabs();
 }
 
-// Render Account Selector Tabs
+// Render Account Tabs with unique icons
 function renderAccountTabs() {
     const container = document.getElementById("account-tabs-container");
     let tabsHtml = "";
@@ -220,19 +229,22 @@ function renderAccountTabs() {
     accounts.forEach(acc => {
         const isCurrent = acc === activeAccount && currentViewMode === "ACCOUNT";
         const count = holdings.filter(h => h.account === acc).length;
+        const icon = getAccountIcon(acc);
 
         if (isCurrent) {
             tabsHtml += `
-        <button onclick="selectAccount('${acc}')" class="px-3 py-1 rounded-lg bg-indigo-600 text-white font-mono font-bold text-xs shadow-sm flex items-center gap-1.5 transition">
+        <button onclick="selectAccount('${acc}')" class="px-2.5 py-0.5 rounded-lg bg-indigo-600 text-white font-mono font-bold text-xs shadow-sm flex items-center gap-1 transition">
+          <span>${icon}</span>
           <span>${acc}</span>
-          <span class="bg-indigo-700 text-[10px] px-1.5 py-0.2 rounded-full">${count}</span>
+          <span class="bg-indigo-700 text-[9.5px] px-1 py-0.2 rounded-full">${count}</span>
         </button>
       `;
         } else {
             tabsHtml += `
-        <button onclick="selectAccount('${acc}')" class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-mono font-semibold text-xs border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition">
+        <button onclick="selectAccount('${acc}')" class="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-mono font-semibold text-xs border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition">
+          <span>${icon}</span>
           <span>${acc}</span>
-          <span class="text-slate-400 text-[10px]">${count}</span>
+          <span class="text-slate-400 text-[9.5px]">${count}</span>
         </button>
       `;
         }
@@ -263,7 +275,7 @@ async function syncFromCloud() {
         });
 
         if (discovered.size === 0) {
-            discovered.add("VM6747");
+            discovered.add("6474");
         }
 
         accounts = Array.from(discovered);
@@ -333,7 +345,7 @@ function updateTickerBadge(prefix, quote) {
     if (chgElem) {
         const sign = isPos ? "+" : "";
         chgElem.innerText = `${sign}${diff.toFixed(2)} (${sign}${pct.toFixed(2)}%)`;
-        chgElem.className = `font-mono text-[11px] font-extrabold text-right mt-0.5 ${isPos ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`;
+        chgElem.className = `font-mono text-[10px] font-extrabold text-right mt-0.5 ${isPos ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`;
     }
 }
 
@@ -415,7 +427,7 @@ async function refreshAllPrices() {
     isFetching = true;
 
     const indicator = document.getElementById("refresh-indicator");
-    indicator.className = "w-2 h-2 rounded-full bg-emerald-500 animate-ping";
+    indicator.className = "w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping";
 
     refreshMacroTickers();
 
@@ -474,11 +486,11 @@ async function refreshAllPrices() {
         console.error("Refresh error:", err);
     } finally {
         isFetching = false;
-        indicator.className = "w-2 h-2 rounded-full bg-slate-400";
+        indicator.className = "w-1.5 h-1.5 rounded-full bg-slate-400";
     }
 }
 
-// Render Consolidated Overview, Account Cards, and Side-by-Side Movers & Losers
+// 4 & 5. Render Account Cards with Distinct Icons & Invested Value
 function renderConsolidatedCards() {
     let grandInvested = 0;
     let grandCurrent = 0;
@@ -508,31 +520,39 @@ function renderConsolidatedCards() {
 
         const pnlCol = accPnl >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400";
         const todayCol = accToday >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400";
+        const icon = getAccountIcon(acc);
 
         cardsHtml += `
-      <div onclick="selectAccount('${acc}')" class="group bg-slate-50 dark:bg-slate-950/80 hover:bg-indigo-50/50 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-xl p-4 cursor-pointer transition shadow-sm space-y-2">
+      <div onclick="selectAccount('${acc}')" class="group bg-slate-50 dark:bg-slate-950/80 hover:bg-indigo-50/50 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-xl p-3 cursor-pointer transition shadow-sm space-y-1.5">
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-1.5 font-bold text-sm text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
-            <span>📁</span>
+          <div class="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+            <span>${icon}</span>
             <span>${acc}</span>
           </div>
-          <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
+          <span class="text-[9.5px] font-mono px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
             ${accItems.length} stocks
           </span>
         </div>
 
-        <div>
-          <div class="text-[10px] uppercase font-bold text-slate-400">Current Value</div>
-          <div class="text-base font-extrabold text-slate-900 dark:text-white font-mono mt-0.5">${fmtInr(accCur)}</div>
+        <!-- 5. Invested Value alongside Current Value -->
+        <div class="grid grid-cols-2 gap-1 pt-0.5">
+          <div>
+            <div class="text-[9px] uppercase font-bold text-slate-400">Invested</div>
+            <div class="text-xs font-bold text-slate-700 dark:text-slate-300 font-mono mt-0.5">${fmtInr(accInv)}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[9px] uppercase font-bold text-slate-400">Current Val</div>
+            <div class="text-xs font-extrabold text-slate-900 dark:text-white font-mono mt-0.5">${fmtInr(accCur)}</div>
+          </div>
         </div>
 
-        <div class="pt-2 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-xs font-mono">
+        <div class="pt-1.5 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-[11px] font-mono">
           <div>
-            <span class="text-slate-400 text-[10px]">Total P&L</span>
+            <span class="text-slate-400 text-[9.5px]">Total P&L</span>
             <div class="font-bold ${pnlCol}">${accPnl >= 0 ? '+' : ''}${fmtInr(accPnl)} (${accPct.toFixed(2)}%)</div>
           </div>
           <div class="text-right">
-            <span class="text-slate-400 text-[10px]">Today</span>
+            <span class="text-slate-400 text-[9.5px]">Today</span>
             <div class="font-bold ${todayCol}">${accToday >= 0 ? '+' : ''}${fmtInr(accToday)}</div>
           </div>
         </div>
@@ -552,40 +572,39 @@ function renderConsolidatedCards() {
 
     const cPnlElem = document.getElementById("c-kpi-total-pnl");
     cPnlElem.innerText = `${grandTotalPnl >= 0 ? '+' : ''}${fmtInr(grandTotalPnl)}`;
-    cPnlElem.className = `font-black text-base sm:text-lg mt-0.5 ${grandColor}`;
+    cPnlElem.className = `font-black text-xs sm:text-sm mt-0.5 ${grandColor}`;
 
     const cPctElem = document.getElementById("c-kpi-total-pct");
     cPctElem.innerText = `${grandTotalPnl >= 0 ? '+' : ''}${grandTotalPct.toFixed(2)}%`;
-    cPctElem.className = `text-[11px] font-bold ${grandColor}`;
+    cPctElem.className = `text-[10px] font-bold ${grandColor}`;
 
     const cTodayElem = document.getElementById("c-kpi-today-pnl");
     cTodayElem.innerText = `${grandTodayPnl >= 0 ? '+' : ''}${fmtInr(grandTodayPnl)}`;
-    cTodayElem.className = `font-black text-base sm:text-lg mt-0.5 ${grandTodayColor}`;
+    cTodayElem.className = `font-black text-xs sm:text-sm mt-0.5 ${grandTodayColor}`;
 
-    document.getElementById("account-cards-grid").innerHTML = cardsHtml || `<div class="col-span-4 text-center py-6 text-slate-400">No accounts created.</div>`;
+    document.getElementById("account-cards-grid").innerHTML = cardsHtml || `<div class="col-span-4 text-center py-4 text-slate-400">No accounts created.</div>`;
 
-    // Render Consolidated Top Gainers and Losers
     renderConsolidatedMoversAndLosers();
 }
 
-// Side-by-Side Top Gainers and Top Losers Across All Holdings
+// 3. Side-by-Side Top Gainers and Losers Displaying Points (+/- ₹) and %
 function renderConsolidatedMoversAndLosers() {
     const gainersContainer = document.getElementById("consolidated-top-gainers");
     const losersContainer = document.getElementById("consolidated-top-losers");
 
     if (!computedData || computedData.length === 0) {
-        gainersContainer.innerHTML = `<div class="text-slate-400 py-2">No stocks found.</div>`;
-        losersContainer.innerHTML = `<div class="text-slate-400 py-2">No stocks found.</div>`;
+        gainersContainer.innerHTML = `<div class="text-slate-400 py-1">No stocks found.</div>`;
+        losersContainer.innerHTML = `<div class="text-slate-400 py-1">No stocks found.</div>`;
         return;
     }
 
     // Sorted list copy
     const sortedDesc = [...computedData].sort((a, b) => b.todayPct - a.todayPct);
 
-    // Top 5 Gainers (highest todayPct)
+    // Top 5 Gainers
     const topGainers = sortedDesc.slice(0, 5);
 
-    // Top 5 Losers (lowest todayPct)
+    // Top 5 Losers
     const topLosers = [...computedData].sort((a, b) => a.todayPct - b.todayPct).slice(0, 5);
 
     // Render Gainers List
@@ -593,23 +612,26 @@ function renderConsolidatedMoversAndLosers() {
     topGainers.forEach((s, idx) => {
         const isPos = s.todayPct >= 0;
         const diffSign = s.todayDiff >= 0 ? "+" : "";
+        const icon = getAccountIcon(s.account);
         gainersHtml += `
-      <div onclick="selectAccount('${s.account}')" class="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-emerald-500/50 cursor-pointer transition">
-        <div class="flex items-center gap-2">
-          <span class="text-slate-400 text-[10px] w-3">${idx + 1}</span>
+      <div onclick="selectAccount('${s.account}')" class="flex items-center justify-between p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-emerald-500/50 cursor-pointer transition">
+        <div class="flex items-center gap-1.5">
+          <span class="text-slate-400 text-[9.5px] w-2.5">${idx + 1}</span>
           <div>
-            <div class="font-sans font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+            <div class="font-sans font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1 text-[11.5px]">
               <span>${s.symbol}</span>
-              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 font-normal">${s.account}</span>
+              <span class="text-[8.5px] font-mono px-1 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 font-normal flex items-center gap-0.5">
+                <span>${icon}</span><span>${s.account}</span>
+              </span>
             </div>
-            <div class="text-[10px] text-slate-400">LTP ₹${s.ltp.toFixed(2)}</div>
+            <div class="text-[9.5px] text-slate-400">LTP ₹${s.ltp.toFixed(2)}</div>
           </div>
         </div>
         <div class="text-right">
-          <div class="font-bold text-emerald-500 dark:text-emerald-400 text-xs">
+          <div class="font-bold text-emerald-500 dark:text-emerald-400 text-[11px]">
             ${isPos ? '+' : ''}${s.todayPct.toFixed(2)}%
           </div>
-          <div class="text-[10px] text-slate-400">${diffSign}${s.todayDiff.toFixed(2)}</div>
+          <div class="text-[9.5px] text-slate-400 font-mono">${diffSign}₹${s.todayDiff.toFixed(2)}</div>
         </div>
       </div>
     `;
@@ -619,25 +641,27 @@ function renderConsolidatedMoversAndLosers() {
     // Render Losers List
     let losersHtml = "";
     topLosers.forEach((s, idx) => {
-        const isNeg = s.todayPct < 0;
         const diffSign = s.todayDiff >= 0 ? "+" : "";
+        const icon = getAccountIcon(s.account);
         losersHtml += `
-      <div onclick="selectAccount('${s.account}')" class="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-rose-500/50 cursor-pointer transition">
-        <div class="flex items-center gap-2">
-          <span class="text-slate-400 text-[10px] w-3">${idx + 1}</span>
+      <div onclick="selectAccount('${s.account}')" class="flex items-center justify-between p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-rose-500/50 cursor-pointer transition">
+        <div class="flex items-center gap-1.5">
+          <span class="text-slate-400 text-[9.5px] w-2.5">${idx + 1}</span>
           <div>
-            <div class="font-sans font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+            <div class="font-sans font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1 text-[11.5px]">
               <span>${s.symbol}</span>
-              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 font-normal">${s.account}</span>
+              <span class="text-[8.5px] font-mono px-1 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 font-normal flex items-center gap-0.5">
+                <span>${icon}</span><span>${s.account}</span>
+              </span>
             </div>
-            <div class="text-[10px] text-slate-400">LTP ₹${s.ltp.toFixed(2)}</div>
+            <div class="text-[9.5px] text-slate-400">LTP ₹${s.ltp.toFixed(2)}</div>
           </div>
         </div>
         <div class="text-right">
-          <div class="font-bold text-rose-500 dark:text-rose-400 text-xs">
+          <div class="font-bold text-rose-500 dark:text-rose-400 text-[11px]">
             ${s.todayPct.toFixed(2)}%
           </div>
-          <div class="text-[10px] text-slate-400">${diffSign}${s.todayDiff.toFixed(2)}</div>
+          <div class="text-[9.5px] text-slate-400 font-mono">${diffSign}₹${s.todayDiff.toFixed(2)}</div>
         </div>
       </div>
     `;
@@ -689,56 +713,56 @@ function renderDashboard() {
 
         desktopHtml += `
       <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-        <td class="py-2.5 px-3 text-slate-400 text-xs">${i + 1}</td>
-        <td class="py-2.5 px-3 font-sans font-bold text-slate-900 dark:text-slate-100 text-[13.5px]">${item.symbol}</td>
-        <td class="py-2.5 px-3 text-right text-slate-600 dark:text-slate-300">${item.bq}</td>
-        <td class="py-2.5 px-3 text-right text-slate-600 dark:text-slate-300">₹${item.price.toFixed(2)}</td>
-        <td class="py-2.5 px-3 text-right text-slate-600 dark:text-slate-300">${fmtInr(item.buyValue)}</td>
-        <td class="py-2.5 px-3 text-right font-bold text-slate-900 dark:text-white">₹${item.ltp.toFixed(2)}</td>
-        <td class="py-2.5 px-3 text-right font-semibold text-slate-800 dark:text-slate-200">${fmtInr(item.currValue)}</td>
-        <td class="py-2.5 px-3 text-right">
+        <td class="py-1.5 px-2 text-slate-400 text-[10px]">${i + 1}</td>
+        <td class="py-1.5 px-2 font-sans font-bold text-slate-900 dark:text-slate-100 text-xs">${item.symbol}</td>
+        <td class="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">${item.bq}</td>
+        <td class="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">₹${item.price.toFixed(2)}</td>
+        <td class="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">${fmtInr(item.buyValue)}</td>
+        <td class="py-1.5 px-2 text-right font-bold text-slate-900 dark:text-white">₹${item.ltp.toFixed(2)}</td>
+        <td class="py-1.5 px-2 text-right font-semibold text-slate-800 dark:text-slate-200">${fmtInr(item.currValue)}</td>
+        <td class="py-1.5 px-2 text-right">
           <div class="font-bold ${totalColor}">${isPositive ? '+' : ''}${fmtInr(item.totalDiff)}</div>
-          <div class="text-[11px] ${totalColor} opacity-90">${isPositive ? '+' : ''}${item.totalPct.toFixed(2)}%</div>
+          <div class="text-[10px] ${totalColor} opacity-90">${isPositive ? '+' : ''}${item.totalPct.toFixed(2)}%</div>
         </td>
-        <td class="py-2.5 px-3 text-right">
-          <span class="font-bold px-2 py-0.5 rounded text-xs inline-block ${todayBadge}">
+        <td class="py-1.5 px-2 text-right">
+          <span class="font-bold px-1.5 py-0.2 rounded text-[10.5px] inline-block ${todayBadge}">
             ${isTodayPos ? '+' : ''}${item.todayPct.toFixed(2)}%
           </span>
         </td>
-        <td class="py-2.5 px-3 text-right text-xs">
+        <td class="py-1.5 px-2 text-right text-[10.5px]">
           <div class="${item.from52Pct < 0 ? 'text-rose-400' : 'text-slate-400'}">${item.from52Pct ? item.from52Pct.toFixed(2) + '%' : '--'}</div>
-          <div class="text-[10px] text-slate-500">H: ${item.high52 ? item.high52.toFixed(2) : '--'}</div>
+          <div class="text-[9px] text-slate-500">H: ${item.high52 ? item.high52.toFixed(2) : '--'}</div>
         </td>
-        <td class="py-2.5 px-3 text-center font-sans">
-          <button onclick="removeStock('${item.id}')" title="Delete" class="text-rose-500 hover:text-rose-700 dark:hover:text-rose-300 p-1">✕</button>
+        <td class="py-1.5 px-2 text-center font-sans">
+          <button onclick="removeStock('${item.id}')" title="Delete" class="text-rose-500 hover:text-rose-700 dark:hover:text-rose-300 px-1">✕</button>
         </td>
       </tr>
     `;
 
         mobileHtml += `
-      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-sm space-y-1.5">
-        <div class="flex items-center justify-between text-xs">
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 shadow-sm space-y-1">
+        <div class="flex items-center justify-between text-[11px]">
           <span class="text-slate-500 dark:text-slate-400">Qty. ${item.bq} • Avg. ${item.price.toFixed(2)}</span>
           <span class="font-bold ${totalColor}">${isPositive ? '+' : ''}${item.totalPct.toFixed(2)}%</span>
         </div>
         <div class="flex items-center justify-between">
-          <span class="font-extrabold text-base text-slate-900 dark:text-white">${item.symbol}</span>
-          <span class="font-extrabold text-base ${totalColor}">${isPositive ? '+' : ''}${fmtInr(item.totalDiff)}</span>
+          <span class="font-extrabold text-sm text-slate-900 dark:text-white">${item.symbol}</span>
+          <span class="font-extrabold text-sm ${totalColor}">${isPositive ? '+' : ''}${fmtInr(item.totalDiff)}</span>
         </div>
-        <div class="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
+        <div class="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100 dark:border-slate-800/80">
           <span class="text-slate-400">Invested ${fmtInr(item.buyValue)}</span>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1.5">
             <span class="font-bold text-slate-800 dark:text-slate-200">LTP ${item.ltp.toFixed(2)}</span>
-            <span class="text-xs font-semibold ${isTodayPos ? 'text-emerald-500' : 'text-rose-500'}">(${isTodayPos ? '+' : ''}${item.todayPct.toFixed(2)}%)</span>
-            <button onclick="removeStock('${item.id}')" class="text-rose-400 hover:text-rose-600 pl-1 text-sm">✕</button>
+            <span class="text-[10px] font-semibold ${isTodayPos ? 'text-emerald-500' : 'text-rose-500'}">(${isTodayPos ? '+' : ''}${item.todayPct.toFixed(2)}%)</span>
+            <button onclick="removeStock('${item.id}')" class="text-rose-400 hover:text-rose-600 pl-0.5 text-xs">✕</button>
           </div>
         </div>
       </div>
     `;
     });
 
-    document.getElementById("portfolio-body").innerHTML = desktopHtml || `<tr><td colspan="11" class="text-center py-8 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>. Use "Tools > Add New Stock".</td></tr>`;
-    document.getElementById("mobile-cards-container").innerHTML = mobileHtml || `<div class="text-center py-8 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>.</div>`;
+    document.getElementById("portfolio-body").innerHTML = desktopHtml || `<tr><td colspan="11" class="text-center py-6 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>. Use "Tools > Add New Stock".</td></tr>`;
+    document.getElementById("mobile-cards-container").innerHTML = mobileHtml || `<div class="text-center py-6 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>.</div>`;
 
     updateKPIs(totalInvested, totalCurrent, totalPrevClose);
 }
@@ -757,15 +781,15 @@ function updateKPIs(invested, current, prevClose) {
 
     const totalElem = document.getElementById("kpi-total-pnl");
     totalElem.innerText = `${totalPnl >= 0 ? '+' : ''}${fmtInr(totalPnl)}`;
-    totalElem.className = `text-base font-extrabold text-right ${totalColor}`;
+    totalElem.className = `text-sm font-extrabold text-right ${totalColor}`;
 
     const totalPctElem = document.getElementById("kpi-total-pct");
     totalPctElem.innerText = `${totalPct >= 0 ? '+' : ''}${totalPct.toFixed(2)}% overall`;
-    totalPctElem.className = `text-[11px] font-bold ${totalColor}`;
+    totalPctElem.className = `text-[10px] font-bold ${totalColor}`;
 
     const todayElem = document.getElementById("kpi-today-pnl");
     todayElem.innerText = `${todayPnl >= 0 ? '+' : ''}${fmtInr(todayPnl)}`;
-    todayElem.className = `text-base font-extrabold text-right ${todayColor}`;
+    todayElem.className = `text-sm font-extrabold text-right ${todayColor}`;
 
     document.getElementById("kpi-prev-close").innerText = `Prev: ${fmtInr(prevClose)}`;
 }
@@ -834,7 +858,7 @@ function handleFileImport(event) {
 
             const discovered = new Set();
             importedHoldings.forEach(h => {
-                const acc = (h.account && h.account.trim()) ? h.account.trim().toUpperCase() : "VM6747";
+                const acc = (h.account && h.account.trim()) ? h.account.trim().toUpperCase() : "6474";
                 h.account = acc;
                 discovered.add(acc);
             });
