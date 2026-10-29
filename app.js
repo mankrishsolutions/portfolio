@@ -33,11 +33,14 @@ function saveViewSettings() {
     }
 }
 
+// Update loadViewSettings to restore Watchlist mode on reload
 function loadViewSettings() {
     const savedMode = localStorage.getItem(VIEW_MODE_KEY);
     const savedAccount = localStorage.getItem(LAST_ACCOUNT_KEY);
 
-    if (savedMode === "ACCOUNT" && savedAccount && accounts.includes(savedAccount)) {
+    if (savedMode === "WATCHLIST") {
+        showWatchlistView();
+    } else if (savedMode === "ACCOUNT" && savedAccount && accounts.includes(savedAccount)) {
         selectAccount(savedAccount);
     } else {
         showConsolidatedDefaultView();
@@ -166,11 +169,30 @@ function updateAccountOptions() {
     select.innerHTML = list.map(a => `<option value="${a}">${a}</option>`).join("");
 }
 
-// Account Switcher
-function selectAccount(acc) {
-    activeAccount = acc;
-    document.getElementById("drawer-account-label").innerText = activeAccount || "--";
-    showAccountHoldingsView();
+// Adjust showAccountHoldingsView to hide Account column when viewing a single account
+function showAccountHoldingsView() {
+    currentViewMode = "ACCOUNT";
+    saveViewSettings();
+
+    document.getElementById("consolidated-section").classList.add("hidden");
+    document.getElementById("holdings-section").classList.remove("hidden");
+
+    const accHeader = document.getElementById("th-col-account");
+    if (accHeader) accHeader.classList.add("hidden");
+}
+
+// Add WATCHLIST as a valid view mode
+function showWatchlistView() {
+    currentViewMode = "WATCHLIST";
+    saveViewSettings();
+
+    document.getElementById("consolidated-section").classList.add("hidden");
+    document.getElementById("holdings-section").classList.remove("hidden");
+
+    // Show the Account column header in Watchlist mode
+    const accHeader = document.getElementById("th-col-account");
+    if (accHeader) accHeader.classList.remove("hidden");
+
     renderAccountTabs();
     renderDashboard();
 }
@@ -251,10 +273,19 @@ async function deleteActiveAccount() {
     renderAccountTabs();
 }
 
-// Render Account Tabs with unique icons
+// Update renderAccountTabs to reflect Watchlist button status
 function renderAccountTabs() {
     const container = document.getElementById("account-tabs-container");
     let tabsHtml = "";
+
+    // "ALL WATCHLIST" Tab in the bar
+    const isWatchlist = currentViewMode === "WATCHLIST";
+    tabsHtml += `
+      <button onclick="showWatchlistView()" class="px-2.5 py-0.5 rounded-lg ${isWatchlist ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold'} font-mono text-xs border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition">
+        <span>👁️</span>
+        <span>ALL (${computedData.length})</span>
+      </button>
+    `;
 
     accounts.forEach(acc => {
         const isCurrent = acc === activeAccount && currentViewMode === "ACCOUNT";
@@ -699,11 +730,17 @@ function renderConsolidatedMoversAndLosers() {
     losersContainer.innerHTML = losersHtml;
 }
 
-// Render Holdings Table for Active Account
+// Update renderDashboard to render all stocks when in WATCHLIST mode
 function renderDashboard() {
-    const accountHoldings = computedData.filter(item => item.account === activeAccount);
+    // If Watchlist mode, take all stocks; otherwise filter by active account
+    const displayHoldings = currentViewMode === "WATCHLIST" 
+        ? [...computedData] 
+        : computedData.filter(item => item.account === activeAccount);
 
-    accountHoldings.sort((a, b) => {
+    const isWatchlist = currentViewMode === "WATCHLIST";
+
+    // Sort rows
+    displayHoldings.sort((a, b) => {
         let valA = a[currentSortCol];
         let valB = b[currentSortCol];
 
@@ -713,7 +750,8 @@ function renderDashboard() {
         return currentSortAsc ? valA - valB : valB - valA;
     });
 
-    const sortHeaders = ['symbol', 'bq', 'price', 'buyValue', 'ltp', 'currValue', 'totalDiff', 'todayPct', 'from52Pct'];
+    // Update sort indicators
+    const sortHeaders = ['account', 'symbol', 'bq', 'price', 'buyValue', 'ltp', 'currValue', 'totalDiff', 'todayPct', 'from52Pct'];
     sortHeaders.forEach(col => {
         const span = document.getElementById(`sort-${col}`);
         if (span) {
@@ -728,7 +766,7 @@ function renderDashboard() {
     let desktopHtml = "";
     let mobileHtml = "";
 
-    accountHoldings.forEach((item, i) => {
+    displayHoldings.forEach((item, i) => {
         totalInvested += item.buyValue;
         totalCurrent += item.currValue;
         totalPrevClose += item.prevValue;
@@ -744,6 +782,11 @@ function renderDashboard() {
         desktopHtml += `
       <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
         <td class="py-1.5 px-2 text-slate-400 text-[10px]">${i + 1}</td>
+        ${isWatchlist ? `
+          <td class="py-1.5 px-2 text-[10px] font-mono font-semibold text-slate-500 dark:text-slate-400">
+            <span class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${item.account}</span>
+          </td>
+        ` : ''}
         <td class="py-1.5 px-2 font-sans font-bold text-slate-900 dark:text-slate-100 text-xs">${item.symbol}</td>
         <td class="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">${item.bq}</td>
         <td class="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">₹${item.price.toFixed(2)}</td>
@@ -772,7 +815,7 @@ function renderDashboard() {
         mobileHtml += `
       <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 shadow-sm space-y-1">
         <div class="flex items-center justify-between text-[11px]">
-          <span class="text-slate-500 dark:text-slate-400">Qty. ${item.bq} • Avg. ${item.price.toFixed(2)}</span>
+          <span class="text-slate-500 dark:text-slate-400">${isWatchlist ? `[${item.account}] ` : ''}Qty. ${item.bq} • Avg. ${item.price.toFixed(2)}</span>
           <span class="font-bold ${totalColor}">${isPositive ? '+' : ''}${item.totalPct.toFixed(2)}%</span>
         </div>
         <div class="flex items-center justify-between">
@@ -791,8 +834,9 @@ function renderDashboard() {
     `;
     });
 
-    document.getElementById("portfolio-body").innerHTML = desktopHtml || `<tr><td colspan="11" class="text-center py-6 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>. Use "Tools > Add New Stock".</td></tr>`;
-    document.getElementById("mobile-cards-container").innerHTML = mobileHtml || `<div class="text-center py-6 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>.</div>`;
+    const colSpan = isWatchlist ? 12 : 11;
+    document.getElementById("portfolio-body").innerHTML = desktopHtml || `<tr><td colspan="${colSpan}" class="text-center py-6 text-slate-400 font-sans">No positions found.</td></tr>`;
+    document.getElementById("mobile-cards-container").innerHTML = mobileHtml || `<div class="text-center py-6 text-slate-400 font-sans">No positions found.</div>`;
 
     updateKPIs(totalInvested, totalCurrent, totalPrevClose);
 }

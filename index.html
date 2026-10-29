@@ -189,6 +189,12 @@
                     <span id="refresh-indicator" class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
                 </label>
 
+				<!-- Watchlist Trigger Button -->
+				<button onclick="showWatchlistView()" id="btn-watchlist-view" title="View all stocks across all accounts as a unified watchlist" class="bg-indigo-600/90 hover:bg-indigo-600 text-white font-semibold px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition">
+					<span>👁️</span>
+					<span>Watchlist</span>
+				</button>
+
                 <!-- Tools Dropdown Menu -->
                 <div class="relative">
                     <button onclick="toggleSettingsMenu()" id="btn-settings-menu" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold px-2 py-1 rounded-lg text-xs border border-slate-200 dark:border-slate-700 transition flex items-center gap-1">
@@ -340,27 +346,28 @@
             <!-- Mobile View: Demat App Card Layout -->
             <div id="mobile-cards-container" class="md:hidden p-2.5 space-y-1.5"></div>
 
-            <!-- Desktop View: Holdings Table -->
-            <div class="hidden md:block overflow-x-auto">
-                <table class="w-full text-left font-mono text-xs border-collapse">
-                    <thead class="bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 text-[10px] text-slate-400 uppercase select-none font-sans tracking-wider">
-                        <tr>
-                            <th class="py-2 px-2.5">#</th>
-                            <th onclick="sortTable('symbol')" class="py-2 px-2.5 th-sort">Script <span id="sort-symbol"></span></th>
-                            <th onclick="sortTable('bq')" class="py-2 px-2.5 text-right th-sort">BQ <span id="sort-bq"></span></th>
-                            <th onclick="sortTable('price')" class="py-2 px-2.5 text-right th-sort">Buy Price <span id="sort-price"></span></th>
-                            <th onclick="sortTable('buyValue')" class="py-2 px-2.5 text-right th-sort">Buy Value <span id="sort-buyValue"></span></th>
-                            <th onclick="sortTable('ltp')" class="py-2.5 px-3 text-right th-sort">LTP <span id="sort-ltp"></span></th>
-                            <th onclick="sortTable('currValue')" class="py-2.5 px-3 text-right th-sort">Current Val <span id="sort-currValue"></span></th>
-                            <th onclick="sortTable('totalDiff')" class="py-2.5 px-3 text-right th-sort">Total P&L <span id="sort-totalDiff"></span></th>
-                            <th onclick="sortTable('todayPct')" class="py-2.5 px-3 text-right th-sort">Day % <span id="sort-todayPct"></span></th>
-                            <th onclick="sortTable('from52Pct')" class="py-2.5 px-3 text-right th-sort">52W Range <span id="sort-from52Pct"></span></th>
-                            <th class="py-2.5 px-3 text-center font-sans">Act</th>
-                        </tr>
-                    </thead>
-                    <tbody id="portfolio-body" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium"></tbody>
-                </table>
-            </div>
+            <!-- Desktop View: Holdings / Watchlist Table -->
+			<div class="hidden md:block overflow-x-auto">
+				<table class="w-full text-left font-mono text-xs border-collapse">
+					<thead class="bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 text-[10px] text-slate-400 uppercase select-none font-sans tracking-wider">
+						<tr>
+							<th class="py-2 px-2.5">#</th>
+							<th onclick="sortTable('account')" id="th-col-account" class="py-2 px-2.5 th-sort hidden">Acc <span id="sort-account"></span></th>
+							<th onclick="sortTable('symbol')" class="py-2 px-2.5 th-sort">Script <span id="sort-symbol"></span></th>
+							<th onclick="sortTable('bq')" class="py-2 px-2.5 text-right th-sort">BQ <span id="sort-bq"></span></th>
+							<th onclick="sortTable('price')" class="py-2 px-2.5 text-right th-sort">Buy Price <span id="sort-price"></span></th>
+							<th onclick="sortTable('buyValue')" class="py-2 px-2.5 text-right th-sort">Buy Value <span id="sort-buyValue"></span></th>
+							<th onclick="sortTable('ltp')" class="py-2.5 px-3 text-right th-sort">LTP <span id="sort-ltp"></span></th>
+							<th onclick="sortTable('currValue')" class="py-2.5 px-3 text-right th-sort">Current Val <span id="sort-currValue"></span></th>
+							<th onclick="sortTable('totalDiff')" class="py-2.5 px-3 text-right th-sort">Total P&L <span id="sort-totalDiff"></span></th>
+							<th onclick="sortTable('todayPct')" class="py-2.5 px-3 text-right th-sort">Day % <span id="sort-todayPct"></span></th>
+							<th onclick="sortTable('from52Pct')" class="py-2.5 px-3 text-right th-sort">52W Range <span id="sort-from52Pct"></span></th>
+							<th class="py-2.5 px-3 text-center font-sans">Act</th>
+						</tr>
+					</thead>
+					<tbody id="portfolio-body" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium"></tbody>
+				</table>
+			</div>
 
         </div>
 
