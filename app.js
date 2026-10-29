@@ -1,10 +1,16 @@
 const WORKER_BASE = "https://tickerprice.mankrishsolutions.workers.dev";
 const THEME_KEY = "portfolio_theme_mode";
-const VIEW_MODE_KEY = "portfolio_last_view_mode"; // 'CONSOLIDATED' or 'ACCOUNT'
+const VIEW_MODE_KEY = "portfolio_last_view_mode"; // 'CONSOLIDATED', 'ACCOUNT', or 'WATCHLIST'
 const LAST_ACCOUNT_KEY = "portfolio_last_selected_account";
 
-// 4. Distinct Account Avatars / Icons
+// Distinct Account Avatars / Icons
 const ACCOUNT_ICONS = ["💼", "🏦", "🪙", "💳", "📊", "🏛️", "💰", "💎"];
+
+// Dynamic Palette for Stock Avatar Badges
+const LOGO_BG_COLORS = [
+    "bg-amber-500", "bg-emerald-500", "bg-sky-500", "bg-indigo-500", 
+    "bg-rose-500", "bg-purple-500", "bg-teal-500", "bg-orange-500"
+];
 
 let holdings = [];
 let accounts = [];
@@ -14,15 +20,60 @@ let computedData = [];
 let isFetching = false;
 let autoRefreshInterval = null;
 
-// Sorting state
+// Sorting state for Account Holdings Table
 let currentSortCol = 'totalDiff';
 let currentSortAsc = false;
+
+// Sorting and Filter state for Watchlist Table
+let wlSearchQuery = "";
+let wlSortCol = 'symbol';
+let wlSortAsc = true;
 
 // Get distinct icon per account index
 function getAccountIcon(accName) {
     const index = accounts.indexOf(accName);
     if (index === -1) return "💼";
     return ACCOUNT_ICONS[index % ACCOUNT_ICONS.length];
+}
+
+// Generate color-coded circle badge letter for stock
+function getStockAvatar(symbol) {
+    let charCode = 0;
+    for (let i = 0; i < symbol.length; i++) charCode += symbol.charCodeAt(i);
+    const colorClass = LOGO_BG_COLORS[charCode % LOGO_BG_COLORS.length];
+    return `<div class="w-8 h-8 rounded-full ${colorClass} text-white flex items-center justify-center font-bold text-xs shadow-sm">${symbol.slice(0, 2)}</div>`;
+}
+
+// Generate intraday trend SVG sparkline
+function generateSparklineSvg(isPositive) {
+    const strokeColor = isPositive ? "#10b981" : "#f43f5e";
+    const path = isPositive 
+        ? "M 0,22 Q 15,10 30,16 T 60,6 T 90,12 T 110,4" 
+        : "M 0,6 Q 20,18 40,12 T 70,22 T 95,16 T 110,24";
+    return `
+      <svg class="w-24 h-7 inline-block overflow-visible" viewBox="0 0 110 28" fill="none">
+        <path d="${path}" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <line x1="0" y1="20" x2="110" y2="20" stroke="#64748b" stroke-width="0.8" stroke-dasharray="2 2" opacity="0.4" />
+      </svg>
+    `;
+}
+
+// Generate 52-Week Range Slider Bar
+function generate52WBar(ltp, low52, high52) {
+    if (!low52 || !high52 || high52 <= low52) {
+        return `<span class="text-slate-400 text-[10px]">--</span>`;
+    }
+    const clampedLtp = Math.max(low52, Math.min(high52, ltp));
+    const pct = Math.round(((clampedLtp - low52) / (high52 - low52)) * 100);
+    return `
+      <div class="flex items-center gap-1.5 justify-center font-sans">
+        <span class="text-[9.5px] text-slate-400 font-bold">L</span>
+        <div class="relative w-20 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full">
+          <div class="absolute top-1/2 -mt-1.5 w-1 h-3 bg-slate-700 dark:bg-slate-300 rounded-sm" style="left: ${pct}%;"></div>
+        </div>
+        <span class="text-[9.5px] text-slate-400 font-bold">H</span>
+      </div>
+    `;
 }
 
 // Save & Restore View Settings
@@ -33,7 +84,6 @@ function saveViewSettings() {
     }
 }
 
-// Update loadViewSettings to restore Watchlist mode on reload
 function loadViewSettings() {
     const savedMode = localStorage.getItem(VIEW_MODE_KEY);
     const savedAccount = localStorage.getItem(LAST_ACCOUNT_KEY);
@@ -53,8 +103,20 @@ function showConsolidatedDefaultView() {
     saveViewSettings();
 
     document.getElementById("consolidated-section").classList.remove("hidden");
+    document.getElementById("watchlist-section").classList.add("hidden");
     document.getElementById("holdings-section").classList.add("hidden");
     renderConsolidatedCards();
+}
+
+// Show Groww-Style Watchlist View
+function showWatchlistView() {
+    currentViewMode = "WATCHLIST";
+    saveViewSettings();
+
+    document.getElementById("consolidated-section").classList.add("hidden");
+    document.getElementById("watchlist-section").classList.remove("hidden");
+    document.getElementById("holdings-section").classList.add("hidden");
+    renderWatchlistTable();
 }
 
 // Show Specific Account Holdings
@@ -63,6 +125,7 @@ function showAccountHoldingsView() {
     saveViewSettings();
 
     document.getElementById("consolidated-section").classList.add("hidden");
+    document.getElementById("watchlist-section").classList.add("hidden");
     document.getElementById("holdings-section").classList.remove("hidden");
 }
 
@@ -125,24 +188,17 @@ function applyTheme(isDark) {
 // Reliable Toggle for Add Form Modal
 function toggleAddForm(forceState) {
     const modal = document.getElementById("add-form-modal");
-    if (!modal) {
-        console.error("add-form-modal element not found in DOM");
-        return;
-    }
-
-    // Determine target open/close state
+    if (!modal) return;
+    
     const isCurrentlyClosed = (modal.style.display === "none" || modal.classList.contains("hidden"));
     const shouldOpen = forceState !== undefined ? forceState : isCurrentlyClosed;
 
     if (shouldOpen) {
         updateAccountOptions();
-        
-        // Display modal
         modal.classList.remove("hidden");
         modal.classList.add("flex");
         modal.style.display = "flex";
 
-        // Preselect active account
         const accSelect = document.getElementById("input-account");
         if (accSelect && activeAccount) {
             accSelect.value = activeAccount;
@@ -163,36 +219,15 @@ function toggleAddForm(forceState) {
 function updateAccountOptions() {
     const select = document.getElementById("input-account");
     if (!select) return;
-
-    // Fallback if accounts list is not yet loaded
     const list = (accounts && accounts.length > 0) ? accounts : ["6474"];
     select.innerHTML = list.map(a => `<option value="${a}">${a}</option>`).join("");
 }
 
-// Adjust showAccountHoldingsView to hide Account column when viewing a single account
-function showAccountHoldingsView() {
-    currentViewMode = "ACCOUNT";
-    saveViewSettings();
-
-    document.getElementById("consolidated-section").classList.add("hidden");
-    document.getElementById("holdings-section").classList.remove("hidden");
-
-    const accHeader = document.getElementById("th-col-account");
-    if (accHeader) accHeader.classList.add("hidden");
-}
-
-// Add WATCHLIST as a valid view mode
-function showWatchlistView() {
-    currentViewMode = "WATCHLIST";
-    saveViewSettings();
-
-    document.getElementById("consolidated-section").classList.add("hidden");
-    document.getElementById("holdings-section").classList.remove("hidden");
-
-    // Show the Account column header in Watchlist mode
-    const accHeader = document.getElementById("th-col-account");
-    if (accHeader) accHeader.classList.remove("hidden");
-
+// Account Switcher
+function selectAccount(acc) {
+    activeAccount = acc;
+    document.getElementById("drawer-account-label").innerText = activeAccount || "--";
+    showAccountHoldingsView();
     renderAccountTabs();
     renderDashboard();
 }
@@ -273,19 +308,10 @@ async function deleteActiveAccount() {
     renderAccountTabs();
 }
 
-// Update renderAccountTabs to reflect Watchlist button status
+// Render Account Tabs with unique icons
 function renderAccountTabs() {
     const container = document.getElementById("account-tabs-container");
     let tabsHtml = "";
-
-    // "ALL WATCHLIST" Tab in the bar
-    const isWatchlist = currentViewMode === "WATCHLIST";
-    tabsHtml += `
-      <button onclick="showWatchlistView()" class="px-2.5 py-0.5 rounded-lg ${isWatchlist ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold'} font-mono text-xs border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition">
-        <span>👁️</span>
-        <span>ALL (${computedData.length})</span>
-      </button>
-    `;
 
     accounts.forEach(acc => {
         const isCurrent = acc === activeAccount && currentViewMode === "ACCOUNT";
@@ -312,11 +338,6 @@ function renderAccountTabs() {
     });
 
     container.innerHTML = tabsHtml;
-}
-
-function updateAccountOptions() {
-    const select = document.getElementById("input-account");
-    select.innerHTML = accounts.map(a => `<option value="${a}">${a}</option>`).join("");
 }
 
 // Cloudflare KV Read
@@ -374,7 +395,7 @@ async function saveToCloud(updatedHoldings) {
 }
 
 const fmtInr = (n) => "₹" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtVol = (n) => n > 100000 ? (n / 100000).toFixed(2) + " L" : Number(n).toLocaleString("en-IN");
+const fmtVol = (n) => Number(n).toLocaleString("en-IN");
 
 // Fetch quote helper
 async function fetchQuote(symbol) {
@@ -471,7 +492,7 @@ async function removeStock(id) {
     refreshAllPrices();
 }
 
-// Sort Column Trigger
+// Sort Column Trigger for Account Holdings Table
 function sortTable(column) {
     if (currentSortCol === column) {
         currentSortAsc = !currentSortAsc;
@@ -488,7 +509,7 @@ async function refreshAllPrices() {
     isFetching = true;
 
     const indicator = document.getElementById("refresh-indicator");
-    indicator.className = "w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping";
+    if (indicator) indicator.className = "w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping";
 
     refreshMacroTickers();
 
@@ -540,6 +561,8 @@ async function refreshAllPrices() {
         renderAccountTabs();
         if (currentViewMode === "CONSOLIDATED") {
             renderConsolidatedCards();
+        } else if (currentViewMode === "WATCHLIST") {
+            renderWatchlistTable();
         } else {
             renderDashboard();
         }
@@ -547,11 +570,11 @@ async function refreshAllPrices() {
         console.error("Refresh error:", err);
     } finally {
         isFetching = false;
-        indicator.className = "w-1.5 h-1.5 rounded-full bg-slate-400";
+        if (indicator) indicator.className = "w-1.5 h-1.5 rounded-full bg-slate-400";
     }
 }
 
-// 4 & 5. Render Account Cards with Distinct Icons & Invested Value
+// Render Consolidated Overview
 function renderConsolidatedCards() {
     let grandInvested = 0;
     let grandCurrent = 0;
@@ -595,7 +618,6 @@ function renderConsolidatedCards() {
           </span>
         </div>
 
-        <!-- 5. Invested Value alongside Current Value -->
         <div class="grid grid-cols-2 gap-1 pt-0.5">
           <div>
             <div class="text-[9px] uppercase font-bold text-slate-400">Invested</div>
@@ -648,7 +670,7 @@ function renderConsolidatedCards() {
     renderConsolidatedMoversAndLosers();
 }
 
-// 3. Side-by-Side Top Gainers and Losers Displaying Points (+/- ₹) and %
+// Side-by-Side Top Gainers & Losers (Summary Page)
 function renderConsolidatedMoversAndLosers() {
     const gainersContainer = document.getElementById("consolidated-top-gainers");
     const losersContainer = document.getElementById("consolidated-top-losers");
@@ -659,16 +681,10 @@ function renderConsolidatedMoversAndLosers() {
         return;
     }
 
-    // Sorted list copy
     const sortedDesc = [...computedData].sort((a, b) => b.todayPct - a.todayPct);
-
-    // Top 5 Gainers
     const topGainers = sortedDesc.slice(0, 5);
-
-    // Top 5 Losers
     const topLosers = [...computedData].sort((a, b) => a.todayPct - b.todayPct).slice(0, 5);
 
-    // Render Gainers List
     let gainersHtml = "";
     topGainers.forEach((s, idx) => {
         const isPos = s.todayPct >= 0;
@@ -699,7 +715,6 @@ function renderConsolidatedMoversAndLosers() {
     });
     gainersContainer.innerHTML = gainersHtml;
 
-    // Render Losers List
     let losersHtml = "";
     topLosers.forEach((s, idx) => {
         const diffSign = s.todayDiff >= 0 ? "+" : "";
@@ -730,17 +745,128 @@ function renderConsolidatedMoversAndLosers() {
     losersContainer.innerHTML = losersHtml;
 }
 
-// Update renderDashboard to render all stocks when in WATCHLIST mode
+// -------------------------------------------------------------
+// DEDICATED GROWW-STYLE WATCHLIST LOGIC & SORTING
+// -------------------------------------------------------------
+
+// Search Filter Input Trigger
+function handleWatchlistSearch(val) {
+    wlSearchQuery = (val || "").trim().toLowerCase();
+    renderWatchlistTable();
+}
+
+// Sort Trigger for Watchlist Table
+function sortWatchlist(column) {
+    if (wlSortCol === column) {
+        wlSortAsc = !wlSortAsc;
+    } else {
+        wlSortCol = column;
+        wlSortAsc = true;
+    }
+    renderWatchlistTable();
+}
+
+// Render Groww-Style Watchlist Table
+function renderWatchlistTable() {
+    const tbody = document.getElementById("watchlist-body");
+    if (!tbody) return;
+
+    // Filter stocks matching query
+    let filtered = [...computedData];
+    if (wlSearchQuery) {
+        filtered = filtered.filter(item => 
+            item.symbol.toLowerCase().includes(wlSearchQuery) || 
+            (item.account && item.account.toLowerCase().includes(wlSearchQuery))
+        );
+    }
+
+    // Update Counter badge
+    document.getElementById("watchlist-total-count").innerText = `(${filtered.length})`;
+
+    // Sort Watchlist Data
+    filtered.sort((a, b) => {
+        let valA = a[wlSortCol];
+        let valB = b[wlSortCol];
+
+        if (typeof valA === "string") {
+            return wlSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+        return wlSortAsc ? valA - valB : valB - valA;
+    });
+
+    // Update Arrow Indicators
+    ['symbol', 'ltp', 'todayPct', 'vol'].forEach(col => {
+        const span = document.getElementById(`wl-sort-${col}`);
+        if (span) {
+            span.innerText = wlSortCol === col ? (wlSortAsc ? '↑' : '↓') : '';
+        }
+    });
+
+    let html = "";
+    filtered.forEach(item => {
+        const isPos = item.todayPct >= 0;
+        const colorClass = isPos ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400";
+        const sign = isPos ? "+" : "";
+        const diffSign = item.todayDiff >= 0 ? "+" : "";
+
+        html += `
+          <tr onclick="selectAccount('${item.account}')" class="hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition">
+            <!-- Company / Symbol with Logo -->
+            <td class="py-3 px-3">
+              <div class="flex items-center gap-3">
+                ${getStockAvatar(item.symbol)}
+                <div>
+                  <div class="font-bold text-slate-900 dark:text-slate-100 text-xs sm:text-[13px] flex items-center gap-1.5">
+                    <span>${item.symbol}</span>
+                    <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 font-normal">
+                      ${item.account}
+                    </span>
+                  </div>
+                  <div class="text-[10px] text-slate-400">NSE • Equity</div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Trend Sparkline Curve -->
+            <td class="py-3 px-3 text-center">
+              ${generateSparklineSvg(isPos)}
+            </td>
+
+            <!-- Market Price (LTP) -->
+            <td class="py-3 px-3 text-right font-mono font-bold text-slate-900 dark:text-white text-xs sm:text-[13px]">
+              ₹${item.ltp.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </td>
+
+            <!-- 1D Change (+/- and %) -->
+            <td class="py-3 px-3 text-right font-mono">
+              <div class="font-bold text-xs sm:text-[12.5px] ${colorClass}">
+                ${diffSign}₹${Math.abs(item.todayDiff).toFixed(2)} (${sign}${item.todayPct.toFixed(2)}%)
+              </div>
+            </td>
+
+            <!-- 1D Volume -->
+            <td class="py-3 px-3 text-right font-mono text-slate-600 dark:text-slate-300 text-xs">
+              ${fmtVol(item.vol)}
+            </td>
+
+            <!-- 52W Performance Slider -->
+            <td class="py-3 px-3 text-center">
+              ${generate52WBar(item.ltp, item.low52, item.high52)}
+            </td>
+          </tr>
+        `;
+    });
+
+    tbody.innerHTML = html || `<tr><td colspan="6" class="text-center py-8 text-slate-400 font-sans">No matching stocks found in your watchlist.</td></tr>`;
+}
+
+// -------------------------------------------------------------
+// ORIGINAL ACCOUNT HOLDINGS TABLE
+// -------------------------------------------------------------
 function renderDashboard() {
-    // If Watchlist mode, take all stocks; otherwise filter by active account
-    const displayHoldings = currentViewMode === "WATCHLIST" 
-        ? [...computedData] 
-        : computedData.filter(item => item.account === activeAccount);
+    const accountHoldings = computedData.filter(item => item.account === activeAccount);
 
-    const isWatchlist = currentViewMode === "WATCHLIST";
-
-    // Sort rows
-    displayHoldings.sort((a, b) => {
+    accountHoldings.sort((a, b) => {
         let valA = a[currentSortCol];
         let valB = b[currentSortCol];
 
@@ -750,8 +876,7 @@ function renderDashboard() {
         return currentSortAsc ? valA - valB : valB - valA;
     });
 
-    // Update sort indicators
-    const sortHeaders = ['account', 'symbol', 'bq', 'price', 'buyValue', 'ltp', 'currValue', 'totalDiff', 'todayPct', 'from52Pct'];
+    const sortHeaders = ['symbol', 'bq', 'price', 'buyValue', 'ltp', 'currValue', 'totalDiff', 'todayPct', 'from52Pct'];
     sortHeaders.forEach(col => {
         const span = document.getElementById(`sort-${col}`);
         if (span) {
@@ -766,7 +891,7 @@ function renderDashboard() {
     let desktopHtml = "";
     let mobileHtml = "";
 
-    displayHoldings.forEach((item, i) => {
+    accountHoldings.forEach((item, i) => {
         totalInvested += item.buyValue;
         totalCurrent += item.currValue;
         totalPrevClose += item.prevValue;
@@ -782,11 +907,6 @@ function renderDashboard() {
         desktopHtml += `
       <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
         <td class="py-1.5 px-2 text-slate-400 text-[10px]">${i + 1}</td>
-        ${isWatchlist ? `
-          <td class="py-1.5 px-2 text-[10px] font-mono font-semibold text-slate-500 dark:text-slate-400">
-            <span class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${item.account}</span>
-          </td>
-        ` : ''}
         <td class="py-1.5 px-2 font-sans font-bold text-slate-900 dark:text-slate-100 text-xs">${item.symbol}</td>
         <td class="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">${item.bq}</td>
         <td class="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">₹${item.price.toFixed(2)}</td>
@@ -815,7 +935,7 @@ function renderDashboard() {
         mobileHtml += `
       <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 shadow-sm space-y-1">
         <div class="flex items-center justify-between text-[11px]">
-          <span class="text-slate-500 dark:text-slate-400">${isWatchlist ? `[${item.account}] ` : ''}Qty. ${item.bq} • Avg. ${item.price.toFixed(2)}</span>
+          <span class="text-slate-500 dark:text-slate-400">Qty. ${item.bq} • Avg. ${item.price.toFixed(2)}</span>
           <span class="font-bold ${totalColor}">${isPositive ? '+' : ''}${item.totalPct.toFixed(2)}%</span>
         </div>
         <div class="flex items-center justify-between">
@@ -834,9 +954,8 @@ function renderDashboard() {
     `;
     });
 
-    const colSpan = isWatchlist ? 12 : 11;
-    document.getElementById("portfolio-body").innerHTML = desktopHtml || `<tr><td colspan="${colSpan}" class="text-center py-6 text-slate-400 font-sans">No positions found.</td></tr>`;
-    document.getElementById("mobile-cards-container").innerHTML = mobileHtml || `<div class="text-center py-6 text-slate-400 font-sans">No positions found.</div>`;
+    document.getElementById("portfolio-body").innerHTML = desktopHtml || `<tr><td colspan="11" class="text-center py-6 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>. Use "Tools > Add New Stock".</td></tr>`;
+    document.getElementById("mobile-cards-container").innerHTML = mobileHtml || `<div class="text-center py-6 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>.</div>`;
 
     updateKPIs(totalInvested, totalCurrent, totalPrevClose);
 }

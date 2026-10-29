@@ -40,13 +40,11 @@
             <button onclick="togglePerformanceDrawer(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-base p-1">✕</button>
         </div>
 
-        <!-- Active Account Tag -->
         <div class="text-xs px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-between">
             <span class="text-slate-500 dark:text-slate-400">Viewing Account:</span>
             <strong id="drawer-account-label" class="text-indigo-600 dark:text-indigo-400 font-bold font-mono">--</strong>
         </div>
 
-        <!-- Summary Performance Card -->
         <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-3 space-y-2.5">
             <div>
                 <div class="text-[11px] text-slate-400">Total Portfolio Value</div>
@@ -76,47 +74,47 @@
         </div>
     </aside>
 
-    <!-- Modal Popup for Add Stock Form (Global Overlay) -->
-	<div id="add-form-modal" style="display: none;" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 items-center justify-center p-3">
-		<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-lg w-full p-4 sm:p-5 shadow-2xl space-y-3.5">
-			<div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-				<div class="flex items-center gap-2">
-					<span class="text-base text-indigo-600 dark:text-indigo-400">➕</span>
-					<h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Add New Stock Position</h3>
-				</div>
-				<button type="button" onclick="toggleAddForm(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm p-1">✕</button>
-			</div>
+    <!-- Modal Popup for Add Stock Form -->
+    <div id="add-form-modal" style="display: none;" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 items-center justify-center p-3">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-lg w-full p-4 sm:p-5 shadow-2xl space-y-3.5">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                <div class="flex items-center gap-2">
+                    <span class="text-base text-indigo-600 dark:text-indigo-400">➕</span>
+                    <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Add New Stock Position</h3>
+                </div>
+                <button type="button" onclick="toggleAddForm(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm p-1">✕</button>
+            </div>
 
-			<form onsubmit="addStock(event)" class="space-y-3">
-				<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-					<div>
-						<label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Target Account</label>
-						<select id="input-account" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold focus:outline-none focus:border-indigo-500"></select>
-					</div>
-					<div>
-						<label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Symbol</label>
-						<input type="text" id="input-symbol" placeholder="e.g. RELIANCE" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg uppercase text-xs focus:outline-none focus:border-indigo-500">
-					</div>
-				</div>
+            <form onsubmit="addStock(event)" class="space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Target Account</label>
+                        <select id="input-account" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold focus:outline-none focus:border-indigo-500"></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Symbol</label>
+                        <input type="text" id="input-symbol" placeholder="e.g. RELIANCE" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg uppercase text-xs focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
 
-				<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-					<div>
-						<label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Quantity (BQ)</label>
-						<input type="number" id="input-qty" placeholder="e.g. 50" min="1" step="1" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
-					</div>
-					<div>
-						<label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Buy Price (₹)</label>
-						<input type="number" id="input-price" placeholder="e.g. 1250.00" min="0.01" step="0.01" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
-					</div>
-				</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Quantity (BQ)</label>
+                        <input type="number" id="input-qty" placeholder="e.g. 50" min="1" step="1" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Buy Price (₹)</label>
+                        <input type="number" id="input-price" placeholder="e.g. 1250.00" min="0.01" step="0.01" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
 
-				<div class="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-					<button type="submit" id="save-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg text-xs shadow transition">Save Position</button>
-					<button type="button" onclick="toggleAddForm(false)" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg text-xs transition">Cancel</button>
-				</div>
-			</form>
-		</div>
-	</div>
+                <div class="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <button type="submit" id="save-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg text-xs shadow transition">Save Position</button>
+                    <button type="button" onclick="toggleAddForm(false)" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg text-xs transition">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <div class="max-w-[1750px] mx-auto space-y-2">
 
@@ -127,7 +125,7 @@
             <div class="flex items-center gap-2 overflow-x-auto">
                 <h1 onclick="showConsolidatedDefaultView()" class="font-extrabold text-sm tracking-tight mr-1 select-none cursor-pointer hover:text-indigo-500 transition">Portfolio</h1>
 
-                <!-- Cloud Icon for Sync Live Quotes -->
+                <!-- Cloud Sync Icon -->
                 <button onclick="syncFromCloud()" title="Sync Live Cloud Quotes" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 transition">
                     <span class="text-xs">☁️</span>
                 </button>
@@ -182,18 +180,18 @@
             <!-- Action Controls -->
             <div class="flex items-center gap-1.5">
 
+                <!-- Dedicated Watchlist Toggle Button -->
+                <button onclick="showWatchlistView()" id="btn-header-watchlist" title="Open Clean Watchlist View" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition">
+                    <span>👁️</span>
+                    <span>Watchlist</span>
+                </button>
+
                 <!-- Auto Polling Checkbox -->
                 <label class="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 cursor-pointer select-none text-[11px]">
                     <input type="checkbox" id="auto-refresh-toggle" onchange="toggleAutoRefresh(this.checked)" class="w-3 h-3 text-indigo-600 rounded">
                     <span class="hidden sm:inline">5s Auto</span>
                     <span id="refresh-indicator" class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
                 </label>
-
-				<!-- Watchlist Trigger Button -->
-				<button onclick="showWatchlistView()" id="btn-watchlist-view" title="View all stocks across all accounts as a unified watchlist" class="bg-indigo-600/90 hover:bg-indigo-600 text-white font-semibold px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition">
-					<span>👁️</span>
-					<span>Watchlist</span>
-				</button>
 
                 <!-- Tools Dropdown Menu -->
                 <div class="relative">
@@ -236,10 +234,9 @@
             </div>
         </header>
 
-        <!-- DEFAULT CONSOLIDATED VIEW -->
+        <!-- 1. DEFAULT CONSOLIDATED VIEW -->
         <section id="consolidated-section" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 sm:p-3.5 shadow-sm space-y-2.5">
 
-            <!-- Consolidated Summary Title + 4 KPIs in ONE SINGLE ROW -->
             <div class="flex flex-wrap lg:flex-nowrap items-center justify-between gap-2.5 pb-2 border-b border-slate-100 dark:border-slate-800">
                 <div class="flex items-center gap-2 min-w-[210px]">
                     <span class="text-lg">🏛️</span>
@@ -249,7 +246,6 @@
                     </div>
                 </div>
 
-                <!-- 4 KPI Blocks In Same Row -->
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1 w-full lg:w-auto">
                     <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5">
                         <span class="text-[9.5px] uppercase font-bold text-slate-400">Total Invested</span>
@@ -309,10 +305,61 @@
 
         </section>
 
-        <!-- Specific Account Holdings View -->
+        <!-- 2. WATCHLIST VIEW (GROWW-STYLE DEDICATED VIEW) -->
+        <section id="watchlist-section" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 sm:p-4 shadow-sm space-y-3">
+            
+            <!-- Watchlist Header & Real-time Search Filter Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                <div class="flex items-center gap-2">
+                    <button onclick="showConsolidatedDefaultView()" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs flex items-center gap-1 transition">
+                        <span>←</span> Back
+                    </button>
+                    <div>
+                        <h2 class="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                            <span>Watchlist</span>
+                            <span id="watchlist-total-count" class="text-xs text-indigo-500 font-mono">(0)</span>
+                        </h2>
+                    </div>
+                </div>
+
+                <!-- Instant Real-Time Search Bar -->
+                <div class="relative w-full sm:w-80">
+                    <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+                        🔍
+                    </span>
+                    <input type="text" id="watchlist-search-input" oninput="handleWatchlistSearch(this.value)" placeholder="Search your watchlist..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                    <button onclick="toggleAddForm(true)" class="bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 font-bold px-2.5 py-1 rounded-lg text-xs flex items-center gap-1 border border-indigo-200 dark:border-indigo-800/60 transition">
+                        <span>+</span> Add Stocks
+                    </button>
+                </div>
+            </div>
+
+            <!-- Groww-Style Watchlist Desktop Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead class="border-b border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 font-medium select-none">
+                        <tr>
+                            <th onclick="sortWatchlist('symbol')" class="py-2.5 px-3 th-sort">Company <span id="wl-sort-symbol"></span></th>
+                            <th class="py-2.5 px-3 text-center">Trend</th>
+                            <th onclick="sortWatchlist('ltp')" class="py-2.5 px-3 text-right th-sort">Mkt price <span id="wl-sort-ltp"></span></th>
+                            <th onclick="sortWatchlist('todayPct')" class="py-2.5 px-3 text-right th-sort">1D change <span id="wl-sort-todayPct"></span></th>
+                            <th onclick="sortWatchlist('vol')" class="py-2.5 px-3 text-right th-sort">1D vol <span id="wl-sort-vol"></span></th>
+                            <th class="py-2.5 px-3 text-center min-w-[130px]">52W perf</th>
+                        </tr>
+                    </thead>
+                    <tbody id="watchlist-body" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
+                        <!-- Rendered dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 3. SPECIFIC ACCOUNT HOLDINGS VIEW (Unchanged original table) -->
         <div id="holdings-section" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
 
-            <!-- Account Header Bar -->
             <div class="px-3 py-1.5 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
                 <div class="flex flex-wrap items-center gap-1.5">
                     <button onclick="showConsolidatedDefaultView()" class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs flex items-center gap-1 transition">
@@ -346,28 +393,27 @@
             <!-- Mobile View: Demat App Card Layout -->
             <div id="mobile-cards-container" class="md:hidden p-2.5 space-y-1.5"></div>
 
-            <!-- Desktop View: Holdings / Watchlist Table -->
-			<div class="hidden md:block overflow-x-auto">
-				<table class="w-full text-left font-mono text-xs border-collapse">
-					<thead class="bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 text-[10px] text-slate-400 uppercase select-none font-sans tracking-wider">
-						<tr>
-							<th class="py-2 px-2.5">#</th>
-							<th onclick="sortTable('account')" id="th-col-account" class="py-2 px-2.5 th-sort hidden">Acc <span id="sort-account"></span></th>
-							<th onclick="sortTable('symbol')" class="py-2 px-2.5 th-sort">Script <span id="sort-symbol"></span></th>
-							<th onclick="sortTable('bq')" class="py-2 px-2.5 text-right th-sort">BQ <span id="sort-bq"></span></th>
-							<th onclick="sortTable('price')" class="py-2 px-2.5 text-right th-sort">Buy Price <span id="sort-price"></span></th>
-							<th onclick="sortTable('buyValue')" class="py-2 px-2.5 text-right th-sort">Buy Value <span id="sort-buyValue"></span></th>
-							<th onclick="sortTable('ltp')" class="py-2.5 px-3 text-right th-sort">LTP <span id="sort-ltp"></span></th>
-							<th onclick="sortTable('currValue')" class="py-2.5 px-3 text-right th-sort">Current Val <span id="sort-currValue"></span></th>
-							<th onclick="sortTable('totalDiff')" class="py-2.5 px-3 text-right th-sort">Total P&L <span id="sort-totalDiff"></span></th>
-							<th onclick="sortTable('todayPct')" class="py-2.5 px-3 text-right th-sort">Day % <span id="sort-todayPct"></span></th>
-							<th onclick="sortTable('from52Pct')" class="py-2.5 px-3 text-right th-sort">52W Range <span id="sort-from52Pct"></span></th>
-							<th class="py-2.5 px-3 text-center font-sans">Act</th>
-						</tr>
-					</thead>
-					<tbody id="portfolio-body" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium"></tbody>
-				</table>
-			</div>
+            <!-- Desktop View: Holdings Table -->
+            <div class="hidden md:block overflow-x-auto">
+                <table class="w-full text-left font-mono text-xs border-collapse">
+                    <thead class="bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 text-[10px] text-slate-400 uppercase select-none font-sans tracking-wider">
+                        <tr>
+                            <th class="py-2 px-2.5">#</th>
+                            <th onclick="sortTable('symbol')" class="py-2 px-2.5 th-sort">Script <span id="sort-symbol"></span></th>
+                            <th onclick="sortTable('bq')" class="py-2 px-2.5 text-right th-sort">BQ <span id="sort-bq"></span></th>
+                            <th onclick="sortTable('price')" class="py-2 px-2.5 text-right th-sort">Buy Price <span id="sort-price"></span></th>
+                            <th onclick="sortTable('buyValue')" class="py-2 px-2.5 text-right th-sort">Buy Value <span id="sort-buyValue"></span></th>
+                            <th onclick="sortTable('ltp')" class="py-2.5 px-3 text-right th-sort">LTP <span id="sort-ltp"></span></th>
+                            <th onclick="sortTable('currValue')" class="py-2.5 px-3 text-right th-sort">Current Val <span id="sort-currValue"></span></th>
+                            <th onclick="sortTable('totalDiff')" class="py-2.5 px-3 text-right th-sort">Total P&L <span id="sort-totalDiff"></span></th>
+                            <th onclick="sortTable('todayPct')" class="py-2.5 px-3 text-right th-sort">Day % <span id="sort-todayPct"></span></th>
+                            <th onclick="sortTable('from52Pct')" class="py-2.5 px-3 text-right th-sort">52W Range <span id="sort-from52Pct"></span></th>
+                            <th class="py-2.5 px-3 text-center font-sans">Act</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolio-body" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium"></tbody>
+                </table>
+            </div>
 
         </div>
 
