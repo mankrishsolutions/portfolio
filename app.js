@@ -119,21 +119,51 @@ function applyTheme(isDark) {
     }
 }
 
-// Toggle Add Form
+// Reliable Toggle for Add Form Modal
 function toggleAddForm(forceState) {
-    const panel = document.getElementById("add-form-panel");
-    const isHidden = forceState !== undefined ? !forceState : panel.classList.contains("hidden");
-
-    if (isHidden) {
-        updateAccountOptions();
-        if (activeAccount) {
-            document.getElementById("input-account").value = activeAccount;
-        }
-        panel.classList.remove("hidden");
-        document.getElementById("input-symbol").focus();
-    } else {
-        panel.classList.add("hidden");
+    const modal = document.getElementById("add-form-modal");
+    if (!modal) {
+        console.error("add-form-modal element not found in DOM");
+        return;
     }
+
+    // Determine target open/close state
+    const isCurrentlyClosed = (modal.style.display === "none" || modal.classList.contains("hidden"));
+    const shouldOpen = forceState !== undefined ? forceState : isCurrentlyClosed;
+
+    if (shouldOpen) {
+        updateAccountOptions();
+        
+        // Display modal
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        modal.style.display = "flex";
+
+        // Preselect active account
+        const accSelect = document.getElementById("input-account");
+        if (accSelect && activeAccount) {
+            accSelect.value = activeAccount;
+        }
+
+        setTimeout(() => {
+            const sym = document.getElementById("input-symbol");
+            if (sym) sym.focus();
+        }, 50);
+    } else {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+        modal.style.display = "none";
+    }
+}
+
+// Safely update account dropdown list
+function updateAccountOptions() {
+    const select = document.getElementById("input-account");
+    if (!select) return;
+
+    // Fallback if accounts list is not yet loaded
+    const list = (accounts && accounts.length > 0) ? accounts : ["6474"];
+    select.innerHTML = list.map(a => `<option value="${a}">${a}</option>`).join("");
 }
 
 // Account Switcher

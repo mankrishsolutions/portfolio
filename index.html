@@ -76,18 +76,58 @@
         </div>
     </aside>
 
+    <!-- Modal Popup for Add Stock Form (Global Overlay) -->
+	<div id="add-form-modal" style="display: none;" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 items-center justify-center p-3">
+		<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-lg w-full p-4 sm:p-5 shadow-2xl space-y-3.5">
+			<div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+				<div class="flex items-center gap-2">
+					<span class="text-base text-indigo-600 dark:text-indigo-400">➕</span>
+					<h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Add New Stock Position</h3>
+				</div>
+				<button type="button" onclick="toggleAddForm(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm p-1">✕</button>
+			</div>
+
+			<form onsubmit="addStock(event)" class="space-y-3">
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+					<div>
+						<label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Target Account</label>
+						<select id="input-account" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold focus:outline-none focus:border-indigo-500"></select>
+					</div>
+					<div>
+						<label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Symbol</label>
+						<input type="text" id="input-symbol" placeholder="e.g. RELIANCE" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg uppercase text-xs focus:outline-none focus:border-indigo-500">
+					</div>
+				</div>
+
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+					<div>
+						<label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Quantity (BQ)</label>
+						<input type="number" id="input-qty" placeholder="e.g. 50" min="1" step="1" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
+					</div>
+					<div>
+						<label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Buy Price (₹)</label>
+						<input type="number" id="input-price" placeholder="e.g. 1250.00" min="0.01" step="0.01" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
+					</div>
+				</div>
+
+				<div class="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+					<button type="submit" id="save-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg text-xs shadow transition">Save Position</button>
+					<button type="button" onclick="toggleAddForm(false)" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg text-xs transition">Cancel</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
     <div class="max-w-[1750px] mx-auto space-y-2">
 
         <!-- Top Navigation & Controls Bar -->
         <header class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 shadow-sm">
 
-<!-- Action Controls -->
-
             <!-- Brand & Tickers Strip -->
             <div class="flex items-center gap-2 overflow-x-auto">
-                <h1 onclick="showConsolidatedDefaultView()" class="font-extrabold text-sm tracking-tight mr-1 select-none cursor-pointer hover:text-indigo-500 transition">Daily State</h1>
+                <h1 onclick="showConsolidatedDefaultView()" class="font-extrabold text-sm tracking-tight mr-1 select-none cursor-pointer hover:text-indigo-500 transition">Portfolio</h1>
 
-                <!-- 6. Cloud Icon for Sync Live Quotes -->
+                <!-- Cloud Icon for Sync Live Quotes -->
                 <button onclick="syncFromCloud()" title="Sync Live Cloud Quotes" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 transition">
                     <span class="text-xs">☁️</span>
                 </button>
@@ -100,7 +140,6 @@
                     </div>
                     <div id="idx-nifty-chg" class="font-mono text-[10px] font-extrabold text-right">--</div>
                 </div>
-
 
                 <!-- GOLD (10g) -->
                 <div class="flex flex-col justify-center px-2 py-0.5 rounded-lg bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 min-w-[130px]">
@@ -191,12 +230,11 @@
             </div>
         </header>
 
-        <!-- 1 & 2. DEFAULT CONSOLIDATED VIEW (Single-Row Integrated Summary Strip) -->
+        <!-- DEFAULT CONSOLIDATED VIEW -->
         <section id="consolidated-section" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 sm:p-3.5 shadow-sm space-y-2.5">
 
             <!-- Consolidated Summary Title + 4 KPIs in ONE SINGLE ROW -->
             <div class="flex flex-wrap lg:flex-nowrap items-center justify-between gap-2.5 pb-2 border-b border-slate-100 dark:border-slate-800">
-                <!-- Title & Subtitle Left -->
                 <div class="flex items-center gap-2 min-w-[210px]">
                     <span class="text-lg">🏛️</span>
                     <div>
@@ -234,7 +272,6 @@
 
             <!-- SIDE-BY-SIDE: Top Movers vs Top Losers -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                <!-- LEFT: Top Gainers -->
                 <div class="bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 space-y-1.5">
                     <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-1.5">
                         <div class="flex items-center gap-1.5">
@@ -246,7 +283,6 @@
                     <div id="consolidated-top-gainers" class="space-y-1 font-mono text-xs"></div>
                 </div>
 
-                <!-- RIGHT: Top Losers -->
                 <div class="bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 space-y-1.5">
                     <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-1.5">
                         <div class="flex items-center gap-1.5">
@@ -259,39 +295,13 @@
                 </div>
             </div>
 
-            <!-- Account Contribution Cards Grid (Showing Invested + Current Value + Distinct Icons) -->
+            <!-- Account Contribution Cards Grid -->
             <div>
                 <h3 class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5">Your Accounts (Click to inspect holdings)</h3>
                 <div id="account-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2"></div>
             </div>
 
         </section>
-
-        <!-- Hidden Add Position Drawer -->
-        <div id="add-form-panel" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-md">
-            <form onsubmit="addStock(event)" class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 items-center">
-                <div>
-                    <label class="block text-[9.5px] uppercase font-bold text-slate-400 mb-0.5">Target Account</label>
-                    <select id="input-account" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2 py-1 rounded-lg text-xs font-mono font-bold focus:outline-none focus:border-indigo-500"></select>
-                </div>
-                <div>
-                    <label class="block text-[9.5px] uppercase font-bold text-slate-400 mb-0.5">Symbol</label>
-                    <input type="text" id="input-symbol" placeholder="e.g. RELIANCE" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1 rounded-lg uppercase text-xs focus:outline-none focus:border-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-[9.5px] uppercase font-bold text-slate-400 mb-0.5">Quantity (BQ)</label>
-                    <input type="number" id="input-qty" placeholder="e.g. 50" min="1" step="1" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-[9.5px] uppercase font-bold text-slate-400 mb-0.5">Buy Price (₹)</label>
-                    <input type="number" id="input-price" placeholder="e.g. 1250.00" min="0.01" step="0.01" required class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-2.5 py-1 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
-                </div>
-                <div class="flex gap-1.5 items-end pt-3 sm:pt-0">
-                    <button type="submit" id="save-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-1 rounded-lg text-xs shadow">Save</button>
-                    <button type="button" onclick="toggleAddForm(false)" class="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 rounded-lg text-xs">Cancel</button>
-                </div>
-            </form>
-        </div>
 
         <!-- Specific Account Holdings View -->
         <div id="holdings-section" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
@@ -340,12 +350,12 @@
                             <th onclick="sortTable('bq')" class="py-2 px-2.5 text-right th-sort">BQ <span id="sort-bq"></span></th>
                             <th onclick="sortTable('price')" class="py-2 px-2.5 text-right th-sort">Buy Price <span id="sort-price"></span></th>
                             <th onclick="sortTable('buyValue')" class="py-2 px-2.5 text-right th-sort">Buy Value <span id="sort-buyValue"></span></th>
-                            <th onclick="sortTable('ltp')" class="py-2 px-2.5 text-right th-sort">LTP <span id="sort-ltp"></span></th>
-                            <th onclick="sortTable('currValue')" class="py-2 px-2.5 text-right th-sort">Current Val <span id="sort-currValue"></span></th>
-                            <th onclick="sortTable('totalDiff')" class="py-2 px-2.5 text-right th-sort">Total P&L <span id="sort-totalDiff"></span></th>
-                            <th onclick="sortTable('todayPct')" class="py-2 px-2.5 text-right th-sort">Day % <span id="sort-todayPct"></span></th>
-                            <th onclick="sortTable('from52Pct')" class="py-2 px-2.5 text-right th-sort">52W Range <span id="sort-from52Pct"></span></th>
-                            <th class="py-2 px-2.5 text-center font-sans">Act</th>
+                            <th onclick="sortTable('ltp')" class="py-2.5 px-3 text-right th-sort">LTP <span id="sort-ltp"></span></th>
+                            <th onclick="sortTable('currValue')" class="py-2.5 px-3 text-right th-sort">Current Val <span id="sort-currValue"></span></th>
+                            <th onclick="sortTable('totalDiff')" class="py-2.5 px-3 text-right th-sort">Total P&L <span id="sort-totalDiff"></span></th>
+                            <th onclick="sortTable('todayPct')" class="py-2.5 px-3 text-right th-sort">Day % <span id="sort-todayPct"></span></th>
+                            <th onclick="sortTable('from52Pct')" class="py-2.5 px-3 text-right th-sort">52W Range <span id="sort-from52Pct"></span></th>
+                            <th class="py-2.5 px-3 text-center font-sans">Act</th>
                         </tr>
                     </thead>
                     <tbody id="portfolio-body" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium"></tbody>
