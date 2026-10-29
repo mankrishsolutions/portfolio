@@ -3,22 +3,25 @@ const THEME_KEY = "portfolio_theme_mode";
 const VIEW_MODE_KEY = "portfolio_last_view_mode"; // 'CONSOLIDATED', 'ACCOUNT', or 'WATCHLIST'
 const LAST_ACCOUNT_KEY = "portfolio_last_selected_account";
 
-// Distinct Account Avatars / Icons
+// Distinct Account Icons
 const ACCOUNT_ICONS = ["💼", "🏦", "🪙", "💳", "📊", "🏛️", "💰", "💎"];
 
-// Dynamic Palette for Stock Avatar Badges
+// Palette for Circular Stock Logos
 const LOGO_BG_COLORS = [
-    "bg-amber-500", "bg-emerald-500", "bg-sky-500", "bg-indigo-500", 
-    "bg-rose-500", "bg-purple-500", "bg-teal-500", "bg-orange-500"
+    "bg-indigo-600", "bg-emerald-600", "bg-amber-600", "bg-blue-600",
+    "bg-rose-600", "bg-purple-600", "bg-teal-600", "bg-orange-600"
 ];
 
 let holdings = [];
 let accounts = [];
 let activeAccount = "";
-let currentViewMode = "CONSOLIDATED"; // Default view
+let currentViewMode = "CONSOLIDATED";
 let computedData = [];
 let isFetching = false;
 let autoRefreshInterval = null;
+
+// Memory cache to prevent blank prices during network throttling
+const quoteCache = {};
 
 // Sorting state for Account Holdings Table
 let currentSortCol = 'totalDiff';
@@ -29,36 +32,19 @@ let wlSearchQuery = "";
 let wlSortCol = 'symbol';
 let wlSortAsc = true;
 
-// Get distinct icon per account index
 function getAccountIcon(accName) {
     const index = accounts.indexOf(accName);
     if (index === -1) return "💼";
     return ACCOUNT_ICONS[index % ACCOUNT_ICONS.length];
 }
 
-// Generate color-coded circle badge letter for stock
 function getStockAvatar(symbol) {
     let charCode = 0;
     for (let i = 0; i < symbol.length; i++) charCode += symbol.charCodeAt(i);
     const colorClass = LOGO_BG_COLORS[charCode % LOGO_BG_COLORS.length];
-    return `<div class="w-8 h-8 rounded-full ${colorClass} text-white flex items-center justify-center font-bold text-xs shadow-sm">${symbol.slice(0, 2)}</div>`;
+    return `<div class="w-8 h-8 rounded-xl ${colorClass} text-white flex items-center justify-center font-extrabold text-[11px] shadow-sm flex-shrink-0">${symbol.slice(0, 2)}</div>`;
 }
 
-// Generate intraday trend SVG sparkline
-function generateSparklineSvg(isPositive) {
-    const strokeColor = isPositive ? "#10b981" : "#f43f5e";
-    const path = isPositive 
-        ? "M 0,22 Q 15,10 30,16 T 60,6 T 90,12 T 110,4" 
-        : "M 0,6 Q 20,18 40,12 T 70,22 T 95,16 T 110,24";
-    return `
-      <svg class="w-24 h-7 inline-block overflow-visible" viewBox="0 0 110 28" fill="none">
-        <path d="${path}" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        <line x1="0" y1="20" x2="110" y2="20" stroke="#64748b" stroke-width="0.8" stroke-dasharray="2 2" opacity="0.4" />
-      </svg>
-    `;
-}
-
-// Generate 52-Week Range Slider Bar
 function generate52WBar(ltp, low52, high52) {
     if (!low52 || !high52 || high52 <= low52) {
         return `<span class="text-slate-400 text-[10px]">--</span>`;
@@ -67,16 +53,15 @@ function generate52WBar(ltp, low52, high52) {
     const pct = Math.round(((clampedLtp - low52) / (high52 - low52)) * 100);
     return `
       <div class="flex items-center gap-1.5 justify-center font-sans">
-        <span class="text-[9.5px] text-slate-400 font-bold">L</span>
+        <span class="text-[9px] text-slate-400 font-bold">L</span>
         <div class="relative w-20 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full">
-          <div class="absolute top-1/2 -mt-1.5 w-1 h-3 bg-slate-700 dark:bg-slate-300 rounded-sm" style="left: ${pct}%;"></div>
+          <div class="absolute top-1/2 -mt-1 w-1 h-2.5 bg-slate-700 dark:bg-slate-300 rounded-sm" style="left: ${pct}%;"></div>
         </div>
-        <span class="text-[9.5px] text-slate-400 font-bold">H</span>
+        <span class="text-[9px] text-slate-400 font-bold">H</span>
       </div>
     `;
 }
 
-// Save & Restore View Settings
 function saveViewSettings() {
     localStorage.setItem(VIEW_MODE_KEY, currentViewMode);
     if (activeAccount) {
@@ -97,61 +82,45 @@ function loadViewSettings() {
     }
 }
 
-// Show Consolidated Overview
 function showConsolidatedDefaultView() {
     currentViewMode = "CONSOLIDATED";
     saveViewSettings();
 
-    document.getElementById("consolidated-section").classList.remove("hidden");
-    document.getElementById("watchlist-section").classList.add("hidden");
-    document.getElementById("holdings-section").classList.add("hidden");
+    document.getElementById("consolidated-section")?.classList.remove("hidden");
+    document.getElementById("watchlist-section")?.classList.add("hidden");
+    document.getElementById("holdings-section")?.classList.add("hidden");
     renderConsolidatedCards();
 }
 
-// Show Groww-Style Watchlist View
 function showWatchlistView() {
     currentViewMode = "WATCHLIST";
     saveViewSettings();
 
-    document.getElementById("consolidated-section").classList.add("hidden");
-    document.getElementById("watchlist-section").classList.remove("hidden");
-    document.getElementById("holdings-section").classList.add("hidden");
+    document.getElementById("consolidated-section")?.classList.add("hidden");
+    document.getElementById("watchlist-section")?.classList.remove("hidden");
+    document.getElementById("holdings-section")?.classList.add("hidden");
     renderWatchlistTable();
 }
 
-// Show Specific Account Holdings
 function showAccountHoldingsView() {
     currentViewMode = "ACCOUNT";
     saveViewSettings();
 
-    document.getElementById("consolidated-section").classList.add("hidden");
-    document.getElementById("watchlist-section").classList.add("hidden");
-    document.getElementById("holdings-section").classList.remove("hidden");
+    document.getElementById("consolidated-section")?.classList.add("hidden");
+    document.getElementById("watchlist-section")?.classList.add("hidden");
+    document.getElementById("holdings-section")?.classList.remove("hidden");
 }
 
-// Toggle Tools Dropdown Menu
-function toggleSettingsMenu(forceState) {
-    const menu = document.getElementById("settings-dropdown");
-    const isHidden = forceState !== undefined ? !forceState : menu.classList.contains("hidden");
-    if (isHidden) {
-        menu.classList.remove("hidden");
-    } else {
-        menu.classList.add("hidden");
+function openFirstAccount() {
+    if (accounts.length > 0) {
+        selectAccount(activeAccount || accounts[0]);
     }
 }
 
-document.addEventListener("click", function (e) {
-    const btn = document.getElementById("btn-settings-menu");
-    const menu = document.getElementById("settings-dropdown");
-    if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) {
-        menu.classList.add("hidden");
-    }
-});
-
-// Left Performance Drawer Controller
 function togglePerformanceDrawer(open) {
     const drawer = document.getElementById("performance-drawer");
     const backdrop = document.getElementById("drawer-backdrop");
+    if (!drawer || !backdrop) return;
     if (open) {
         drawer.classList.remove("-translate-x-full");
         backdrop.classList.remove("hidden");
@@ -161,7 +130,6 @@ function togglePerformanceDrawer(open) {
     }
 }
 
-// Theme Management
 function initTheme() {
     const saved = localStorage.getItem(THEME_KEY) || "dark";
     applyTheme(saved === "dark");
@@ -174,18 +142,19 @@ function toggleTheme() {
 }
 
 function applyTheme(isDark) {
+    const icon = document.getElementById("theme-menu-icon");
+    const label = document.getElementById("theme-menu-label");
     if (isDark) {
         document.documentElement.classList.add("dark");
-        document.getElementById("theme-menu-icon").innerText = "☀️";
-        document.getElementById("theme-menu-label").innerText = "Dark";
+        if (icon) icon.innerText = "☀️";
+        if (label) label.innerText = "Dark";
     } else {
         document.documentElement.classList.remove("dark");
-        document.getElementById("theme-menu-icon").innerText = "🌙";
-        document.getElementById("theme-menu-label").innerText = "Light";
+        if (icon) icon.innerText = "🌙";
+        if (label) label.innerText = "Light";
     }
 }
 
-// Reliable Toggle for Add Form Modal
 function toggleAddForm(forceState) {
     const modal = document.getElementById("add-form-modal");
     if (!modal) return;
@@ -215,7 +184,6 @@ function toggleAddForm(forceState) {
     }
 }
 
-// Safely update account dropdown list
 function updateAccountOptions() {
     const select = document.getElementById("input-account");
     if (!select) return;
@@ -223,16 +191,15 @@ function updateAccountOptions() {
     select.innerHTML = list.map(a => `<option value="${a}">${a}</option>`).join("");
 }
 
-// Account Switcher
 function selectAccount(acc) {
     activeAccount = acc;
-    document.getElementById("drawer-account-label").innerText = activeAccount || "--";
+    const label = document.getElementById("drawer-account-label");
+    if (label) label.innerText = activeAccount || "--";
     showAccountHoldingsView();
     renderAccountTabs();
     renderDashboard();
 }
 
-// Create New Account
 function promptAddAccount() {
     const name = prompt("Enter new account name (e.g. ZERODHA_2):");
     if (!name) return;
@@ -245,7 +212,6 @@ function promptAddAccount() {
     saveToCloud(holdings);
 }
 
-// Rename Active Account
 async function renameActiveAccount() {
     const currentName = activeAccount;
     if (!currentName) return;
@@ -273,13 +239,13 @@ async function renameActiveAccount() {
     saveViewSettings();
 
     await saveToCloud(holdings);
-    document.getElementById("drawer-account-label").innerText = activeAccount;
+    const label = document.getElementById("drawer-account-label");
+    if (label) label.innerText = activeAccount;
     renderAccountTabs();
     renderDashboard();
     renderConsolidatedCards();
 }
 
-// Delete Active Account
 async function deleteActiveAccount() {
     const currentName = activeAccount;
     if (!currentName) return;
@@ -308,9 +274,9 @@ async function deleteActiveAccount() {
     renderAccountTabs();
 }
 
-// Render Account Tabs with unique icons
 function renderAccountTabs() {
     const container = document.getElementById("account-tabs-container");
+    if (!container) return;
     let tabsHtml = "";
 
     accounts.forEach(acc => {
@@ -320,10 +286,10 @@ function renderAccountTabs() {
 
         if (isCurrent) {
             tabsHtml += `
-        <button onclick="selectAccount('${acc}')" class="px-2.5 py-0.5 rounded-lg bg-indigo-600 text-white font-mono font-bold text-xs shadow-sm flex items-center gap-1 transition">
+        <button onclick="selectAccount('${acc}')" class="px-2.5 py-0.5 rounded-lg bg-slate-900 dark:bg-emerald-500 text-white dark:text-slate-950 font-mono font-bold text-xs shadow-sm flex items-center gap-1 transition">
           <span>${icon}</span>
           <span>${acc}</span>
-          <span class="bg-indigo-700 text-[9.5px] px-1 py-0.2 rounded-full">${count}</span>
+          <span class="bg-black/20 text-[9px] px-1.5 py-0.2 rounded-full">${count}</span>
         </button>
       `;
         } else {
@@ -331,7 +297,7 @@ function renderAccountTabs() {
         <button onclick="selectAccount('${acc}')" class="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-mono font-semibold text-xs border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition">
           <span>${icon}</span>
           <span>${acc}</span>
-          <span class="text-slate-400 text-[9.5px]">${count}</span>
+          <span class="text-slate-400 text-[9px]">${count}</span>
         </button>
       `;
         }
@@ -372,7 +338,8 @@ async function syncFromCloud() {
             activeAccount = accounts[0];
         }
 
-        document.getElementById("drawer-account-label").innerText = activeAccount;
+        const label = document.getElementById("drawer-account-label");
+        if (label) label.innerText = activeAccount;
         renderAccountTabs();
         await refreshAllPrices();
         loadViewSettings();
@@ -397,18 +364,22 @@ async function saveToCloud(updatedHoldings) {
 const fmtInr = (n) => "₹" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtVol = (n) => Number(n).toLocaleString("en-IN");
 
-// Fetch quote helper
+// Fetch quote with memory caching and error handling
 async function fetchQuote(symbol) {
     try {
         const res = await fetch(`${WORKER_BASE}/?symbol=${encodeURIComponent(symbol)}`);
-        if (!res.ok) return null;
-        return await res.json();
+        if (!res.ok) return quoteCache[symbol] || null;
+        const data = await res.json();
+        if (data && data.ltp !== undefined) {
+            quoteCache[symbol] = data; // Cache latest valid response
+            return data;
+        }
+        return quoteCache[symbol] || null;
     } catch (e) {
-        return null;
+        return quoteCache[symbol] || null;
     }
 }
 
-// Update Header Indices
 function updateTickerBadge(prefix, quote) {
     if (!quote || quote.ltp === undefined) return;
     const ltp = quote.ltp;
@@ -427,20 +398,18 @@ function updateTickerBadge(prefix, quote) {
     if (chgElem) {
         const sign = isPos ? "+" : "";
         chgElem.innerText = `${sign}${diff.toFixed(2)} (${sign}${pct.toFixed(2)}%)`;
-        chgElem.className = `font-mono text-[10px] font-extrabold text-right mt-0.5 ${isPos ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`;
+        chgElem.className = `font-mono text-[10.5px] font-bold ${isPos ? 'text-emerald-500' : 'text-rose-500'}`;
     }
 }
 
-// Refresh Macro Indices & Commodities in INR
-function refreshMacroTickers() {
+async function refreshMacroTickers() {
     fetchQuote("NIFTY_50").then(q => updateTickerBadge("idx-nifty", q));
-    fetchQuote("BANK_NIFTY").then(q => updateTickerBadge("idx-banknifty", q));
-    fetchQuote("MIDCAP_50").then(q => updateTickerBadge("idx-midcap", q));
     fetchQuote("GOLD").then(q => updateTickerBadge("idx-gold", q));
     fetchQuote("SILVER").then(q => updateTickerBadge("idx-silver", q));
+    fetchQuote("BANK_NIFTY").then(q => updateTickerBadge("idx-banknifty", q));
+    fetchQuote("MIDCAP_50").then(q => updateTickerBadge("idx-midcap", q));
 }
 
-// Add position
 async function addStock(e) {
     e.preventDefault();
     const targetAccount = document.getElementById("input-account").value || activeAccount;
@@ -483,7 +452,6 @@ async function addStock(e) {
     refreshAllPrices();
 }
 
-// Remove position
 async function removeStock(id) {
     if (!confirm("Delete position?")) return;
     holdings = holdings.filter(item => item.id !== id);
@@ -492,7 +460,6 @@ async function removeStock(id) {
     refreshAllPrices();
 }
 
-// Sort Column Trigger for Account Holdings Table
 function sortTable(column) {
     if (currentSortCol === column) {
         currentSortAsc = !currentSortAsc;
@@ -503,7 +470,22 @@ function sortTable(column) {
     renderDashboard();
 }
 
-// Main Price Sync
+// Helper to batch requests to prevent HTTP 429 rate limits
+async function fetchInBatches(items, batchSize = 4) {
+    const results = {};
+    for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        const batchResults = await Promise.all(batch.map(sym => fetchQuote(sym)));
+        batch.forEach((sym, idx) => {
+            results[sym] = batchResults[idx];
+        });
+        if (i + batchSize < items.length) {
+            await new Promise(r => setTimeout(r, 60)); // Small breather to avoid burst rate-limit
+        }
+    }
+    return results;
+}
+
 async function refreshAllPrices() {
     if (isFetching) return;
     isFetching = true;
@@ -516,15 +498,11 @@ async function refreshAllPrices() {
     const uniqueSymbols = Array.from(new Set(holdings.map(h => h.symbol)));
 
     try {
-        const quoteResults = await Promise.all(uniqueSymbols.map(s => fetchQuote(s)));
-        const quoteMap = {};
-        uniqueSymbols.forEach((sym, idx) => {
-            quoteMap[sym] = quoteResults[idx];
-        });
+        const quoteMap = await fetchInBatches(uniqueSymbols, 4);
 
         computedData = holdings.map(item => {
-            const q = quoteMap[item.symbol];
-            const ltp = q?.ltp || item.price;
+            const q = quoteMap[item.symbol] || quoteCache[item.symbol];
+            const ltp = q?.ltp !== undefined ? q.ltp : item.price;
             const prevClose = q?.previousClose || ltp;
             const high52 = q?.high52 || 0;
             const low52 = q?.low52 || 0;
@@ -535,9 +513,9 @@ async function refreshAllPrices() {
             const prevValue = item.bq * prevClose;
 
             const totalDiff = currValue - buyValue;
-            const totalPct = (totalDiff / buyValue) * 100;
+            const totalPct = buyValue > 0 ? (totalDiff / buyValue) * 100 : 0;
             const todayDiff = ltp - prevClose;
-            const todayPct = ((ltp - prevClose) / prevClose) * 100;
+            const todayPct = prevClose > 0 ? ((ltp - prevClose) / prevClose) * 100 : 0;
             const from52Pct = high52 > 0 ? ((ltp - high52) / high52) * 100 : 0;
 
             return {
@@ -574,13 +552,12 @@ async function refreshAllPrices() {
     }
 }
 
-// Render Consolidated Overview
 function renderConsolidatedCards() {
     let grandInvested = 0;
     let grandCurrent = 0;
     let grandPrev = 0;
 
-    let cardsHtml = "";
+    let accountSummaries = [];
 
     accounts.forEach(acc => {
         const accItems = computedData.filter(i => i.account === acc);
@@ -601,161 +578,188 @@ function renderConsolidatedCards() {
         const accPnl = accCur - accInv;
         const accPct = accInv > 0 ? (accPnl / accInv) * 100 : 0;
         const accToday = accCur - accPre;
+        const accTodayPct = accPre > 0 ? (accToday / accPre) * 100 : 0;
 
-        const pnlCol = accPnl >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400";
-        const todayCol = accToday >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400";
-        const icon = getAccountIcon(acc);
-
-        cardsHtml += `
-      <div onclick="selectAccount('${acc}')" class="group bg-slate-50 dark:bg-slate-950/80 hover:bg-indigo-50/50 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-xl p-3 cursor-pointer transition shadow-sm space-y-1.5">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
-            <span>${icon}</span>
-            <span>${acc}</span>
-          </div>
-          <span class="text-[9.5px] font-mono px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
-            ${accItems.length} stocks
-          </span>
-        </div>
-
-        <div class="grid grid-cols-2 gap-1 pt-0.5">
-          <div>
-            <div class="text-[9px] uppercase font-bold text-slate-400">Invested</div>
-            <div class="text-xs font-bold text-slate-700 dark:text-slate-300 font-mono mt-0.5">${fmtInr(accInv)}</div>
-          </div>
-          <div class="text-right">
-            <div class="text-[9px] uppercase font-bold text-slate-400">Current Val</div>
-            <div class="text-xs font-extrabold text-slate-900 dark:text-white font-mono mt-0.5">${fmtInr(accCur)}</div>
-          </div>
-        </div>
-
-        <div class="pt-1.5 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-[11px] font-mono">
-          <div>
-            <span class="text-slate-400 text-[9.5px]">Total P&L</span>
-            <div class="font-bold ${pnlCol}">${accPnl >= 0 ? '+' : ''}${fmtInr(accPnl)} (${accPct.toFixed(2)}%)</div>
-          </div>
-          <div class="text-right">
-            <span class="text-slate-400 text-[9.5px]">Today</span>
-            <div class="font-bold ${todayCol}">${accToday >= 0 ? '+' : ''}${fmtInr(accToday)}</div>
-          </div>
-        </div>
-      </div>
-    `;
+        accountSummaries.push({
+            account: acc,
+            count: accItems.length,
+            invested: accInv,
+            current: accCur,
+            pnl: accPnl,
+            pct: accPct,
+            today: accToday,
+            todayPct: accTodayPct
+        });
     });
 
-    const grandTotalPnl = grandCurrent - grandInvested;
-    const grandTotalPct = grandInvested > 0 ? (grandTotalPnl / grandInvested) * 100 : 0;
-    const grandTodayPnl = grandCurrent - grandPrev;
+    updateKPIs(grandInvested, grandCurrent, grandPrev);
 
-    const grandColor = grandTotalPnl >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400";
-    const grandTodayColor = grandTodayPnl >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400";
+    accountSummaries.sort((a, b) => b.count - a.count);
+    const top2Accounts = accountSummaries.slice(0, 2);
 
-    document.getElementById("c-kpi-invested").innerText = fmtInr(grandInvested);
-    document.getElementById("c-kpi-current").innerText = fmtInr(grandCurrent);
+    let top2Html = "";
+    top2Accounts.forEach(accData => {
+        const pnlCol = accData.pnl >= 0 ? "text-emerald-500" : "text-rose-500";
+        const dayCol = accData.today >= 0 ? "text-emerald-500" : "text-rose-500";
+        const icon = getAccountIcon(accData.account);
 
-    const cPnlElem = document.getElementById("c-kpi-total-pnl");
-    cPnlElem.innerText = `${grandTotalPnl >= 0 ? '+' : ''}${fmtInr(grandTotalPnl)}`;
-    cPnlElem.className = `font-black text-xs sm:text-sm mt-0.5 ${grandColor}`;
+        top2Html += `
+          <div onclick="selectAccount('${accData.account}')" class="bg-slate-50 dark:bg-slate-900/70 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800/90 rounded-xl p-3 cursor-pointer transition shadow-sm space-y-2.5">
+            <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/80 pb-1.5">
+              <div class="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-slate-100">
+                <span>${icon}</span>
+                <span>Account ${accData.account}</span>
+              </div>
+              <span class="text-[9.5px] font-mono px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
+                ${accData.count} stocks
+              </span>
+            </div>
 
-    const cPctElem = document.getElementById("c-kpi-total-pct");
-    cPctElem.innerText = `${grandTotalPnl >= 0 ? '+' : ''}${grandTotalPct.toFixed(2)}%`;
-    cPctElem.className = `text-[10px] font-bold ${grandColor}`;
+            <div>
+              <div class="text-[9.5px] text-slate-400 font-medium">Current Value</div>
+              <div class="text-xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
+                ${fmtInr(accData.current)}
+              </div>
+            </div>
 
-    const cTodayElem = document.getElementById("c-kpi-today-pnl");
-    cTodayElem.innerText = `${grandTodayPnl >= 0 ? '+' : ''}${fmtInr(grandTodayPnl)}`;
-    cTodayElem.className = `font-black text-xs sm:text-sm mt-0.5 ${grandTodayColor}`;
+            <div class="space-y-1.5 text-xs font-mono pt-1">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-slate-400 font-sans">1D returns</span>
+                <span class="font-bold ${dayCol}">${accData.today >= 0 ? '+' : ''}${fmtInr(accData.today)} (${accData.todayPct.toFixed(2)}%)</span>
+              </div>
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-slate-400 font-sans">Total returns</span>
+                <span class="font-bold ${pnlCol}">${accData.pnl >= 0 ? '+' : ''}${fmtInr(accData.pnl)} (${accData.pct.toFixed(2)}%)</span>
+              </div>
+              <div class="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200/60 dark:border-slate-800/80">
+                <span class="text-slate-400 font-sans">Invested</span>
+                <span class="font-bold text-slate-800 dark:text-slate-200">${fmtInr(accData.invested)}</span>
+              </div>
+            </div>
+          </div>
+        `;
+    });
+    const top2Box = document.getElementById("top-two-accounts-container");
+    if (top2Box) top2Box.innerHTML = top2Html || `<div class="text-slate-400 text-xs py-2">No accounts found.</div>`;
 
-    document.getElementById("account-cards-grid").innerHTML = cardsHtml || `<div class="col-span-4 text-center py-4 text-slate-400">No accounts created.</div>`;
+    let allCardsHtml = "";
+    accountSummaries.forEach(acc => {
+        const pnlCol = acc.pnl >= 0 ? "text-emerald-500" : "text-rose-500";
+        const todayCol = acc.today >= 0 ? "text-emerald-500" : "text-rose-500";
+        const icon = getAccountIcon(acc.account);
 
-    renderConsolidatedMoversAndLosers();
+        allCardsHtml += `
+          <div onclick="selectAccount('${acc.account}')" class="group bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800/80 hover:border-emerald-500/50 rounded-xl p-3 cursor-pointer transition shadow-sm space-y-1.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-slate-100 group-hover:text-emerald-500 transition">
+                <span>${icon}</span>
+                <span>${acc.account}</span>
+              </div>
+              <span class="text-[9.5px] font-mono px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
+                ${acc.count} stocks
+              </span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-1 pt-0.5">
+              <div>
+                <div class="text-[9px] uppercase font-bold text-slate-400">Invested</div>
+                <div class="text-xs font-bold text-slate-700 dark:text-slate-300 font-mono mt-0.5">${fmtInr(acc.invested)}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-[9px] uppercase font-bold text-slate-400">Current</div>
+                <div class="text-xs font-extrabold text-slate-900 dark:text-white font-mono mt-0.5">${fmtInr(acc.current)}</div>
+              </div>
+            </div>
+
+            <div class="pt-1.5 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-[11px] font-mono">
+              <div>
+                <span class="text-slate-400 text-[9.5px]">Total P&L</span>
+                <div class="font-bold ${pnlCol}">${acc.pnl >= 0 ? '+' : ''}${fmtInr(acc.pnl)} (${acc.pct.toFixed(2)}%)</div>
+              </div>
+              <div class="text-right">
+                <span class="text-slate-400 text-[9.5px]">Today</span>
+                <div class="font-bold ${todayCol}">${acc.today >= 0 ? '+' : ''}${fmtInr(acc.today)}</div>
+              </div>
+            </div>
+          </div>
+        `;
+    });
+    const gridBox = document.getElementById("account-cards-grid");
+    if (gridBox) gridBox.innerHTML = allCardsHtml || `<div class="col-span-4 text-center py-4 text-slate-400">No accounts created.</div>`;
+
+    renderGrowwMoverCards();
 }
 
-// Side-by-Side Top Gainers & Losers (Summary Page)
-function renderConsolidatedMoversAndLosers() {
-    const gainersContainer = document.getElementById("consolidated-top-gainers");
-    const losersContainer = document.getElementById("consolidated-top-losers");
+function renderGrowwMoverCards() {
+    const gainersContainer = document.getElementById("groww-gainers-grid");
+    const losersContainer = document.getElementById("groww-losers-grid");
 
     if (!computedData || computedData.length === 0) {
-        gainersContainer.innerHTML = `<div class="text-slate-400 py-1">No stocks found.</div>`;
-        losersContainer.innerHTML = `<div class="text-slate-400 py-1">No stocks found.</div>`;
+        if (gainersContainer) gainersContainer.innerHTML = `<div class="col-span-4 text-slate-400 py-2">No stocks found.</div>`;
+        if (losersContainer) losersContainer.innerHTML = `<div class="col-span-4 text-slate-400 py-2">No stocks found.</div>`;
         return;
     }
 
     const sortedDesc = [...computedData].sort((a, b) => b.todayPct - a.todayPct);
-    const topGainers = sortedDesc.slice(0, 5);
-    const topLosers = [...computedData].sort((a, b) => a.todayPct - b.todayPct).slice(0, 5);
+    const topGainers = sortedDesc.slice(0, 4);
+    const topLosers = [...computedData].sort((a, b) => a.todayPct - b.todayPct).slice(0, 4);
 
-    let gainersHtml = "";
-    topGainers.forEach((s, idx) => {
-        const isPos = s.todayPct >= 0;
-        const diffSign = s.todayDiff >= 0 ? "+" : "";
-        const icon = getAccountIcon(s.account);
-        gainersHtml += `
-      <div onclick="selectAccount('${s.account}')" class="flex items-center justify-between p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-emerald-500/50 cursor-pointer transition">
-        <div class="flex items-center gap-1.5">
-          <span class="text-slate-400 text-[9.5px] w-2.5">${idx + 1}</span>
-          <div>
-            <div class="font-sans font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1 text-[11.5px]">
-              <span>${s.symbol}</span>
-              <span class="text-[8.5px] font-mono px-1 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 font-normal flex items-center gap-0.5">
-                <span>${icon}</span><span>${s.account}</span>
-              </span>
+    let gHtml = "";
+    topGainers.forEach(s => {
+        gHtml += `
+          <div onclick="selectAccount('${s.account}')" class="bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 cursor-pointer transition shadow-sm space-y-2 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              ${getStockAvatar(s.symbol)}
+              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-500 font-semibold">${s.account}</span>
             </div>
-            <div class="text-[9.5px] text-slate-400">LTP ₹${s.ltp.toFixed(2)}</div>
-          </div>
-        </div>
-        <div class="text-right">
-          <div class="font-bold text-emerald-500 dark:text-emerald-400 text-[11px]">
-            ${isPos ? '+' : ''}${s.todayPct.toFixed(2)}%
-          </div>
-          <div class="text-[9.5px] text-slate-400 font-mono">${diffSign}₹${s.todayDiff.toFixed(2)}</div>
-        </div>
-      </div>
-    `;
-    });
-    gainersContainer.innerHTML = gainersHtml;
 
-    let losersHtml = "";
-    topLosers.forEach((s, idx) => {
-        const diffSign = s.todayDiff >= 0 ? "+" : "";
-        const icon = getAccountIcon(s.account);
-        losersHtml += `
-      <div onclick="selectAccount('${s.account}')" class="flex items-center justify-between p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-rose-500/50 cursor-pointer transition">
-        <div class="flex items-center gap-1.5">
-          <span class="text-slate-400 text-[9.5px] w-2.5">${idx + 1}</span>
-          <div>
-            <div class="font-sans font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1 text-[11.5px]">
-              <span>${s.symbol}</span>
-              <span class="text-[8.5px] font-mono px-1 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 font-normal flex items-center gap-0.5">
-                <span>${icon}</span><span>${s.account}</span>
-              </span>
+            <div>
+              <div class="font-bold text-slate-900 dark:text-white text-xs truncate">${s.symbol}</div>
+              <div class="text-[9.5px] text-slate-400">NSE • Equity</div>
             </div>
-            <div class="text-[9.5px] text-slate-400">LTP ₹${s.ltp.toFixed(2)}</div>
+
+            <div class="pt-1.5 border-t border-slate-200/50 dark:border-slate-800/60">
+              <div class="font-extrabold text-xs font-mono text-slate-900 dark:text-white">₹${s.ltp.toFixed(2)}</div>
+              <div class="font-bold font-mono text-emerald-500 text-[10.5px] mt-0.5">
+                +${s.todayDiff.toFixed(2)} (+${s.todayPct.toFixed(2)}%)
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="text-right">
-          <div class="font-bold text-rose-500 dark:text-rose-400 text-[11px]">
-            ${s.todayPct.toFixed(2)}%
-          </div>
-          <div class="text-[9.5px] text-slate-400 font-mono">${diffSign}₹${s.todayDiff.toFixed(2)}</div>
-        </div>
-      </div>
-    `;
+        `;
     });
-    losersContainer.innerHTML = losersHtml;
+    if (gainersContainer) gainersContainer.innerHTML = gHtml;
+
+    let lHtml = "";
+    topLosers.forEach(s => {
+        lHtml += `
+          <div onclick="selectAccount('${s.account}')" class="bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 cursor-pointer transition shadow-sm space-y-2 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              ${getStockAvatar(s.symbol)}
+              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-500 font-semibold">${s.account}</span>
+            </div>
+
+            <div>
+              <div class="font-bold text-slate-900 dark:text-white text-xs truncate">${s.symbol}</div>
+              <div class="text-[9.5px] text-slate-400">NSE • Equity</div>
+            </div>
+
+            <div class="pt-1.5 border-t border-slate-200/50 dark:border-slate-800/60">
+              <div class="font-extrabold text-xs font-mono text-slate-900 dark:text-white">₹${s.ltp.toFixed(2)}</div>
+              <div class="font-bold font-mono text-rose-500 text-[10.5px] mt-0.5">
+                ${s.todayDiff.toFixed(2)} (${s.todayPct.toFixed(2)}%)
+              </div>
+            </div>
+          </div>
+        `;
+    });
+    if (losersContainer) losersContainer.innerHTML = lHtml;
 }
 
-// -------------------------------------------------------------
-// DEDICATED GROWW-STYLE WATCHLIST LOGIC & SORTING
-// -------------------------------------------------------------
-
-// Search Filter Input Trigger
 function handleWatchlistSearch(val) {
     wlSearchQuery = (val || "").trim().toLowerCase();
     renderWatchlistTable();
 }
 
-// Sort Trigger for Watchlist Table
 function sortWatchlist(column) {
     if (wlSortCol === column) {
         wlSortAsc = !wlSortAsc;
@@ -766,25 +770,40 @@ function sortWatchlist(column) {
     renderWatchlistTable();
 }
 
-// Render Groww-Style Watchlist Table
 function renderWatchlistTable() {
     const tbody = document.getElementById("watchlist-body");
     if (!tbody) return;
 
-    // Filter stocks matching query
-    let filtered = [...computedData];
+    // Deduplicate stocks by symbol across accounts
+    const uniqueStockMap = new Map();
+
+    computedData.forEach(item => {
+        if (!uniqueStockMap.has(item.symbol)) {
+            uniqueStockMap.set(item.symbol, {
+                ...item,
+                accountList: [item.account]
+            });
+        } else {
+            const existing = uniqueStockMap.get(item.symbol);
+            if (!existing.accountList.includes(item.account)) {
+                existing.accountList.push(item.account);
+            }
+        }
+    });
+
+    let deduplicatedList = Array.from(uniqueStockMap.values());
+
     if (wlSearchQuery) {
-        filtered = filtered.filter(item => 
+        deduplicatedList = deduplicatedList.filter(item => 
             item.symbol.toLowerCase().includes(wlSearchQuery) || 
-            (item.account && item.account.toLowerCase().includes(wlSearchQuery))
+            item.accountList.some(acc => acc.toLowerCase().includes(wlSearchQuery))
         );
     }
 
-    // Update Counter badge
-    document.getElementById("watchlist-total-count").innerText = `(${filtered.length})`;
+    const counter = document.getElementById("watchlist-total-count");
+    if (counter) counter.innerText = `(${deduplicatedList.length} unique)`;
 
-    // Sort Watchlist Data
-    filtered.sort((a, b) => {
+    deduplicatedList.sort((a, b) => {
         let valA = a[wlSortCol];
         let valB = b[wlSortCol];
 
@@ -794,7 +813,6 @@ function renderWatchlistTable() {
         return wlSortAsc ? valA - valB : valB - valA;
     });
 
-    // Update Arrow Indicators
     ['symbol', 'ltp', 'todayPct', 'vol'].forEach(col => {
         const span = document.getElementById(`wl-sort-${col}`);
         if (span) {
@@ -803,66 +821,60 @@ function renderWatchlistTable() {
     });
 
     let html = "";
-    filtered.forEach(item => {
+    deduplicatedList.forEach(item => {
         const isPos = item.todayPct >= 0;
-        const colorClass = isPos ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400";
+        const colorClass = isPos ? "text-emerald-500" : "text-rose-500";
         const sign = isPos ? "+" : "";
         const diffSign = item.todayDiff >= 0 ? "+" : "";
 
+        const accountBadges = item.accountList.map(acc => 
+            `<span class="text-[8.5px] font-mono px-1 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">${acc}</span>`
+        ).join(" ");
+
         html += `
-          <tr onclick="selectAccount('${item.account}')" class="hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition">
+          <tr onclick="selectAccount('${item.accountList[0]}')" class="hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition">
             <!-- Company / Symbol with Logo -->
-            <td class="py-3 px-3">
-              <div class="flex items-center gap-3">
+            <td class="py-2.5 px-3">
+              <div class="flex items-center gap-2.5">
                 ${getStockAvatar(item.symbol)}
                 <div>
-                  <div class="font-bold text-slate-900 dark:text-slate-100 text-xs sm:text-[13px] flex items-center gap-1.5">
+                  <div class="font-bold text-slate-900 dark:text-slate-100 text-xs flex items-center gap-1.5">
                     <span>${item.symbol}</span>
-                    <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 font-normal">
-                      ${item.account}
-                    </span>
+                    <span class="flex items-center gap-1">${accountBadges}</span>
                   </div>
-                  <div class="text-[10px] text-slate-400">NSE • Equity</div>
+                  <div class="text-[9.5px] text-slate-400">NSE • Equity</div>
                 </div>
               </div>
             </td>
 
-            <!-- Trend Sparkline Curve -->
-            <td class="py-3 px-3 text-center">
-              ${generateSparklineSvg(isPos)}
-            </td>
-
             <!-- Market Price (LTP) -->
-            <td class="py-3 px-3 text-right font-mono font-bold text-slate-900 dark:text-white text-xs sm:text-[13px]">
+            <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900 dark:text-white text-xs">
               ₹${item.ltp.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
 
             <!-- 1D Change (+/- and %) -->
-            <td class="py-3 px-3 text-right font-mono">
-              <div class="font-bold text-xs sm:text-[12.5px] ${colorClass}">
+            <td class="py-2.5 px-3 text-right font-mono">
+              <div class="font-bold text-xs ${colorClass}">
                 ${diffSign}₹${Math.abs(item.todayDiff).toFixed(2)} (${sign}${item.todayPct.toFixed(2)}%)
               </div>
             </td>
 
             <!-- 1D Volume -->
-            <td class="py-3 px-3 text-right font-mono text-slate-600 dark:text-slate-300 text-xs">
+            <td class="py-2.5 px-3 text-right font-mono text-slate-600 dark:text-slate-300 text-xs">
               ${fmtVol(item.vol)}
             </td>
 
             <!-- 52W Performance Slider -->
-            <td class="py-3 px-3 text-center">
+            <td class="py-2.5 px-3 text-center">
               ${generate52WBar(item.ltp, item.low52, item.high52)}
             </td>
           </tr>
         `;
     });
 
-    tbody.innerHTML = html || `<tr><td colspan="6" class="text-center py-8 text-slate-400 font-sans">No matching stocks found in your watchlist.</td></tr>`;
+    tbody.innerHTML = html || `<tr><td colspan="5" class="text-center py-6 text-slate-400 font-sans">No matching stocks found in your watchlist.</td></tr>`;
 }
 
-// -------------------------------------------------------------
-// ORIGINAL ACCOUNT HOLDINGS TABLE
-// -------------------------------------------------------------
 function renderDashboard() {
     const accountHoldings = computedData.filter(item => item.account === activeAccount);
 
@@ -884,49 +896,41 @@ function renderDashboard() {
         }
     });
 
-    let totalInvested = 0;
-    let totalCurrent = 0;
-    let totalPrevClose = 0;
-
     let desktopHtml = "";
     let mobileHtml = "";
 
     accountHoldings.forEach((item, i) => {
-        totalInvested += item.buyValue;
-        totalCurrent += item.currValue;
-        totalPrevClose += item.prevValue;
-
         const isPositive = item.totalDiff >= 0;
         const isTodayPos = item.todayPct >= 0;
 
-        const totalColor = isPositive ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400";
+        const totalColor = isPositive ? "text-emerald-500" : "text-rose-500";
         const todayBadge = isTodayPos
             ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40"
             : "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40";
 
         desktopHtml += `
       <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-        <td class="py-1.5 px-2 text-slate-400 text-[10px]">${i + 1}</td>
-        <td class="py-1.5 px-2 font-sans font-bold text-slate-900 dark:text-slate-100 text-xs">${item.symbol}</td>
-        <td class="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">${item.bq}</td>
-        <td class="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">₹${item.price.toFixed(2)}</td>
-        <td class="py-1.5 px-2 text-right text-slate-600 dark:text-slate-300">${fmtInr(item.buyValue)}</td>
-        <td class="py-1.5 px-2 text-right font-bold text-slate-900 dark:text-white">₹${item.ltp.toFixed(2)}</td>
-        <td class="py-1.5 px-2 text-right font-semibold text-slate-800 dark:text-slate-200">${fmtInr(item.currValue)}</td>
-        <td class="py-1.5 px-2 text-right">
+        <td class="py-1.5 px-2.5 text-slate-400 text-[10px]">${i + 1}</td>
+        <td class="py-1.5 px-2.5 font-sans font-bold text-slate-900 dark:text-slate-100 text-xs">${item.symbol}</td>
+        <td class="py-1.5 px-2.5 text-right text-slate-600 dark:text-slate-300">${item.bq}</td>
+        <td class="py-1.5 px-2.5 text-right text-slate-600 dark:text-slate-300">₹${item.price.toFixed(2)}</td>
+        <td class="py-1.5 px-2.5 text-right text-slate-600 dark:text-slate-300">${fmtInr(item.buyValue)}</td>
+        <td class="py-1.5 px-2.5 text-right font-bold text-slate-900 dark:text-white">₹${item.ltp.toFixed(2)}</td>
+        <td class="py-1.5 px-2.5 text-right font-semibold text-slate-800 dark:text-slate-200">${fmtInr(item.currValue)}</td>
+        <td class="py-1.5 px-2.5 text-right">
           <div class="font-bold ${totalColor}">${isPositive ? '+' : ''}${fmtInr(item.totalDiff)}</div>
-          <div class="text-[10px] ${totalColor} opacity-90">${isPositive ? '+' : ''}${item.totalPct.toFixed(2)}%</div>
+          <div class="text-[9.5px] ${totalColor} opacity-90">${isPositive ? '+' : ''}${item.totalPct.toFixed(2)}%</div>
         </td>
-        <td class="py-1.5 px-2 text-right">
-          <span class="font-bold px-1.5 py-0.2 rounded text-[10.5px] inline-block ${todayBadge}">
+        <td class="py-1.5 px-2.5 text-right">
+          <span class="font-bold px-1.5 py-0.2 rounded text-[10px] inline-block ${todayBadge}">
             ${isTodayPos ? '+' : ''}${item.todayPct.toFixed(2)}%
           </span>
         </td>
-        <td class="py-1.5 px-2 text-right text-[10.5px]">
+        <td class="py-1.5 px-2.5 text-right text-[10px]">
           <div class="${item.from52Pct < 0 ? 'text-rose-400' : 'text-slate-400'}">${item.from52Pct ? item.from52Pct.toFixed(2) + '%' : '--'}</div>
           <div class="text-[9px] text-slate-500">H: ${item.high52 ? item.high52.toFixed(2) : '--'}</div>
         </td>
-        <td class="py-1.5 px-2 text-center font-sans">
+        <td class="py-1.5 px-2.5 text-center font-sans">
           <button onclick="removeStock('${item.id}')" title="Delete" class="text-rose-500 hover:text-rose-700 dark:hover:text-rose-300 px-1">✕</button>
         </td>
       </tr>
@@ -954,40 +958,48 @@ function renderDashboard() {
     `;
     });
 
-    document.getElementById("portfolio-body").innerHTML = desktopHtml || `<tr><td colspan="11" class="text-center py-6 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>. Use "Tools > Add New Stock".</td></tr>`;
-    document.getElementById("mobile-cards-container").innerHTML = mobileHtml || `<div class="text-center py-6 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>.</div>`;
-
-    updateKPIs(totalInvested, totalCurrent, totalPrevClose);
+    const bodyElem = document.getElementById("portfolio-body");
+    const mContainer = document.getElementById("mobile-cards-container");
+    if (bodyElem) bodyElem.innerHTML = desktopHtml || `<tr><td colspan="11" class="text-center py-6 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>.</td></tr>`;
+    if (mContainer) mContainer.innerHTML = mobileHtml || `<div class="text-center py-6 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>.</div>`;
 }
 
-// Update Drawer KPIs
 function updateKPIs(invested, current, prevClose) {
     const totalPnl = current - invested;
     const totalPct = invested > 0 ? (totalPnl / invested) * 100 : 0;
     const todayPnl = current - prevClose;
 
-    const totalColor = totalPnl >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400';
-    const todayColor = todayPnl >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400';
+    const totalColor = totalPnl >= 0 ? 'text-emerald-500' : 'text-rose-500';
+    const todayColor = todayPnl >= 0 ? 'text-emerald-500' : 'text-rose-500';
 
-    document.getElementById("kpi-invested").innerText = fmtInr(invested);
-    document.getElementById("kpi-current").innerText = fmtInr(current);
-
+    const invElem = document.getElementById("kpi-invested");
+    const curElem = document.getElementById("kpi-current");
     const totalElem = document.getElementById("kpi-total-pnl");
-    totalElem.innerText = `${totalPnl >= 0 ? '+' : ''}${fmtInr(totalPnl)}`;
-    totalElem.className = `text-sm font-extrabold text-right ${totalColor}`;
-
     const totalPctElem = document.getElementById("kpi-total-pct");
-    totalPctElem.innerText = `${totalPct >= 0 ? '+' : ''}${totalPct.toFixed(2)}% overall`;
-    totalPctElem.className = `text-[10px] font-bold ${totalColor}`;
-
     const todayElem = document.getElementById("kpi-today-pnl");
-    todayElem.innerText = `${todayPnl >= 0 ? '+' : ''}${fmtInr(todayPnl)}`;
-    todayElem.className = `text-sm font-extrabold text-right ${todayColor}`;
+    const prevElem = document.getElementById("kpi-prev-close");
 
-    document.getElementById("kpi-prev-close").innerText = `Prev: ${fmtInr(prevClose)}`;
+    if (invElem) invElem.innerText = fmtInr(invested);
+    if (curElem) curElem.innerText = fmtInr(current);
+
+    if (totalElem) {
+        totalElem.innerText = `${totalPnl >= 0 ? '+' : ''}${fmtInr(totalPnl)}`;
+        totalElem.className = `text-sm font-extrabold text-right ${totalColor}`;
+    }
+
+    if (totalPctElem) {
+        totalPctElem.innerText = `${totalPct >= 0 ? '+' : ''}${totalPct.toFixed(2)}% overall`;
+        totalPctElem.className = `text-[10px] font-bold ${totalColor}`;
+    }
+
+    if (todayElem) {
+        todayElem.innerText = `${todayPnl >= 0 ? '+' : ''}${fmtInr(todayPnl)}`;
+        todayElem.className = `text-sm font-extrabold text-right ${todayColor}`;
+    }
+
+    if (prevElem) prevElem.innerText = `Prev: ${fmtInr(prevClose)}`;
 }
 
-// Auto-refresh tick
 function toggleAutoRefresh(start) {
     if (start) {
         refreshAllPrices();
@@ -997,7 +1009,6 @@ function toggleAutoRefresh(start) {
     }
 }
 
-// Backup JSON
 function downloadPortfolioBackup() {
     if (!holdings || holdings.length === 0) {
         alert("No holdings found to export.");
@@ -1028,7 +1039,6 @@ function downloadPortfolioBackup() {
     URL.revokeObjectURL(url);
 }
 
-// Import JSON
 function handleFileImport(event) {
     const file = event.target.files[0];
     if (!file) return;
