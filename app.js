@@ -20,7 +20,7 @@ let computedData = [];
 let isFetching = false;
 let autoRefreshInterval = null;
 
-// Memory cache to prevent blank prices during network throttling
+// Memory cache to prevent blank prices
 const quoteCache = {};
 
 // Sorting state for Account Holdings Table
@@ -29,6 +29,7 @@ let currentSortAsc = false;
 
 // Sorting and Filter state for Watchlist Table
 let wlSearchQuery = "";
+let wlAccountFilter = "ALL";
 let wlSortCol = 'symbol';
 let wlSortAsc = true;
 
@@ -69,6 +70,32 @@ function saveViewSettings() {
     }
 }
 
+function updateTopNavTabs() {
+    const exploreBtn = document.getElementById("nav-tab-explore");
+    const holdingsBtn = document.getElementById("nav-tab-holdings");
+    const watchlistBtn = document.getElementById("nav-tab-watchlist");
+
+    const activeClasses = ["border-b-2", "border-slate-900", "dark:border-emerald-400", "text-slate-900", "dark:text-white", "font-bold"];
+    const inactiveClasses = ["text-slate-500", "dark:text-slate-400", "font-semibold"];
+
+    [exploreBtn, holdingsBtn, watchlistBtn].forEach(b => {
+        if (!b) return;
+        b.classList.remove(...activeClasses);
+        b.classList.add(...inactiveClasses);
+    });
+
+    if (currentViewMode === "CONSOLIDATED" && exploreBtn) {
+        exploreBtn.classList.remove(...inactiveClasses);
+        exploreBtn.classList.add(...activeClasses);
+    } else if (currentViewMode === "ACCOUNT" && holdingsBtn) {
+        holdingsBtn.classList.remove(...inactiveClasses);
+        holdingsBtn.classList.add(...activeClasses);
+    } else if (currentViewMode === "WATCHLIST" && watchlistBtn) {
+        watchlistBtn.classList.remove(...inactiveClasses);
+        watchlistBtn.classList.add(...activeClasses);
+    }
+}
+
 function loadViewSettings() {
     const savedMode = localStorage.getItem(VIEW_MODE_KEY);
     const savedAccount = localStorage.getItem(LAST_ACCOUNT_KEY);
@@ -85,6 +112,7 @@ function loadViewSettings() {
 function showConsolidatedDefaultView() {
     currentViewMode = "CONSOLIDATED";
     saveViewSettings();
+    updateTopNavTabs();
 
     document.getElementById("consolidated-section")?.classList.remove("hidden");
     document.getElementById("watchlist-section")?.classList.add("hidden");
@@ -95,16 +123,19 @@ function showConsolidatedDefaultView() {
 function showWatchlistView() {
     currentViewMode = "WATCHLIST";
     saveViewSettings();
+    updateTopNavTabs();
 
     document.getElementById("consolidated-section")?.classList.add("hidden");
     document.getElementById("watchlist-section")?.classList.remove("hidden");
     document.getElementById("holdings-section")?.classList.add("hidden");
+    populateWatchlistAccountFilter();
     renderWatchlistTable();
 }
 
 function showAccountHoldingsView() {
     currentViewMode = "ACCOUNT";
     saveViewSettings();
+    updateTopNavTabs();
 
     document.getElementById("consolidated-section")?.classList.add("hidden");
     document.getElementById("watchlist-section")?.classList.add("hidden");
@@ -117,18 +148,24 @@ function openFirstAccount() {
     }
 }
 
-function togglePerformanceDrawer(open) {
-    const drawer = document.getElementById("performance-drawer");
-    const backdrop = document.getElementById("drawer-backdrop");
-    if (!drawer || !backdrop) return;
-    if (open) {
-        drawer.classList.remove("-translate-x-full");
-        backdrop.classList.remove("hidden");
+function toggleSettingsMenu(forceState) {
+    const menu = document.getElementById("settings-dropdown");
+    if (!menu) return;
+    const isHidden = forceState !== undefined ? !forceState : menu.classList.contains("hidden");
+    if (isHidden) {
+        menu.classList.remove("hidden");
     } else {
-        drawer.classList.add("-translate-x-full");
-        backdrop.classList.add("hidden");
+        menu.classList.add("hidden");
     }
 }
+
+document.addEventListener("click", function (e) {
+    const btn = document.getElementById("btn-settings-menu");
+    const menu = document.getElementById("settings-dropdown");
+    if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.add("hidden");
+    }
+});
 
 function initTheme() {
     const saved = localStorage.getItem(THEME_KEY) || "dark";
@@ -193,8 +230,6 @@ function updateAccountOptions() {
 
 function selectAccount(acc) {
     activeAccount = acc;
-    const label = document.getElementById("drawer-account-label");
-    if (label) label.innerText = activeAccount || "--";
     showAccountHoldingsView();
     renderAccountTabs();
     renderDashboard();
@@ -239,8 +274,6 @@ async function renameActiveAccount() {
     saveViewSettings();
 
     await saveToCloud(holdings);
-    const label = document.getElementById("drawer-account-label");
-    if (label) label.innerText = activeAccount;
     renderAccountTabs();
     renderDashboard();
     renderConsolidatedCards();
@@ -338,8 +371,6 @@ async function syncFromCloud() {
             activeAccount = accounts[0];
         }
 
-        const label = document.getElementById("drawer-account-label");
-        if (label) label.innerText = activeAccount;
         renderAccountTabs();
         await refreshAllPrices();
         loadViewSettings();
@@ -364,14 +395,14 @@ async function saveToCloud(updatedHoldings) {
 const fmtInr = (n) => "₹" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtVol = (n) => Number(n).toLocaleString("en-IN");
 
-// Fetch quote with memory caching and error handling
+// Fetch quote with memory caching
 async function fetchQuote(symbol) {
     try {
         const res = await fetch(`${WORKER_BASE}/?symbol=${encodeURIComponent(symbol)}`);
         if (!res.ok) return quoteCache[symbol] || null;
         const data = await res.json();
         if (data && data.ltp !== undefined) {
-            quoteCache[symbol] = data; // Cache latest valid response
+            quoteCache[symbol] = data;
             return data;
         }
         return quoteCache[symbol] || null;
@@ -406,8 +437,6 @@ async function refreshMacroTickers() {
     fetchQuote("NIFTY_50").then(q => updateTickerBadge("idx-nifty", q));
     fetchQuote("GOLD").then(q => updateTickerBadge("idx-gold", q));
     fetchQuote("SILVER").then(q => updateTickerBadge("idx-silver", q));
-    fetchQuote("BANK_NIFTY").then(q => updateTickerBadge("idx-banknifty", q));
-    fetchQuote("MIDCAP_50").then(q => updateTickerBadge("idx-midcap", q));
 }
 
 async function addStock(e) {
@@ -470,7 +499,7 @@ function sortTable(column) {
     renderDashboard();
 }
 
-// Helper to batch requests to prevent HTTP 429 rate limits
+// Request throttling in batches of 4
 async function fetchInBatches(items, batchSize = 4) {
     const results = {};
     for (let i = 0; i < items.length; i += batchSize) {
@@ -480,7 +509,7 @@ async function fetchInBatches(items, batchSize = 4) {
             results[sym] = batchResults[idx];
         });
         if (i + batchSize < items.length) {
-            await new Promise(r => setTimeout(r, 60)); // Small breather to avoid burst rate-limit
+            await new Promise(r => setTimeout(r, 60));
         }
     }
     return results;
@@ -552,6 +581,7 @@ async function refreshAllPrices() {
     }
 }
 
+// Render Top 2 Account Summary Badges in Top Indices Row & Explore Grid
 function renderConsolidatedCards() {
     let grandInvested = 0;
     let grandCurrent = 0;
@@ -592,56 +622,55 @@ function renderConsolidatedCards() {
         });
     });
 
-    updateKPIs(grandInvested, grandCurrent, grandPrev);
+    const grandTotalPnl = grandCurrent - grandInvested;
+    const grandTotalPct = grandInvested > 0 ? (grandTotalPnl / grandInvested) * 100 : 0;
+    const grandTodayPnl = grandCurrent - grandPrev;
+    const grandTodayPct = grandPrev > 0 ? (grandTodayPnl / grandPrev) * 100 : 0;
 
+    const totalCol = grandTotalPnl >= 0 ? "text-emerald-500" : "text-rose-500";
+    const dayCol = grandTodayPnl >= 0 ? "text-emerald-500" : "text-rose-500";
+
+    // Update Right "Your investments" Card (Total Consolidated)
+    const curElem = document.getElementById("groww-kpi-current");
+    const invElem = document.getElementById("groww-kpi-invested");
+    const dayElem = document.getElementById("groww-kpi-day");
+    const totElem = document.getElementById("groww-kpi-total");
+
+    if (curElem) curElem.innerText = fmtInr(grandCurrent);
+    if (invElem) invElem.innerText = fmtInr(grandInvested);
+    if (dayElem) {
+        dayElem.innerText = `${grandTodayPnl >= 0 ? '+' : ''}${fmtInr(grandTodayPnl)} (${grandTodayPct.toFixed(2)}%)`;
+        dayElem.className = `font-mono font-bold ${dayCol}`;
+    }
+    if (totElem) {
+        totElem.innerText = `${grandTotalPnl >= 0 ? '+' : ''}${fmtInr(grandTotalPnl)} (${grandTotalPct.toFixed(2)}%)`;
+        totElem.className = `font-mono font-bold ${totalCol}`;
+    }
+
+    // Sort by largest accounts
     accountSummaries.sort((a, b) => b.count - a.count);
     const top2Accounts = accountSummaries.slice(0, 2);
 
-    let top2Html = "";
+    // Render Top 2 Account Badges on Top Row (In place of BankNifty and Midcap)
+    let topBadgesHtml = "";
     top2Accounts.forEach(accData => {
-        const pnlCol = accData.pnl >= 0 ? "text-emerald-500" : "text-rose-500";
-        const dayCol = accData.today >= 0 ? "text-emerald-500" : "text-rose-500";
         const icon = getAccountIcon(accData.account);
-
-        top2Html += `
-          <div onclick="selectAccount('${accData.account}')" class="bg-slate-50 dark:bg-slate-900/70 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800/90 rounded-xl p-3 cursor-pointer transition shadow-sm space-y-2.5">
-            <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/80 pb-1.5">
-              <div class="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-slate-100">
-                <span>${icon}</span>
-                <span>Account ${accData.account}</span>
-              </div>
-              <span class="text-[9.5px] font-mono px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
-                ${accData.count} stocks
-              </span>
-            </div>
-
-            <div>
-              <div class="text-[9.5px] text-slate-400 font-medium">Current Value</div>
-              <div class="text-xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
-                ${fmtInr(accData.current)}
-              </div>
-            </div>
-
-            <div class="space-y-1.5 text-xs font-mono pt-1">
-              <div class="flex items-center justify-between text-[11px]">
-                <span class="text-slate-400 font-sans">1D returns</span>
-                <span class="font-bold ${dayCol}">${accData.today >= 0 ? '+' : ''}${fmtInr(accData.today)} (${accData.todayPct.toFixed(2)}%)</span>
-              </div>
-              <div class="flex items-center justify-between text-[11px]">
-                <span class="text-slate-400 font-sans">Total returns</span>
-                <span class="font-bold ${pnlCol}">${accData.pnl >= 0 ? '+' : ''}${fmtInr(accData.pnl)} (${accData.pct.toFixed(2)}%)</span>
-              </div>
-              <div class="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200/60 dark:border-slate-800/80">
-                <span class="text-slate-400 font-sans">Invested</span>
-                <span class="font-bold text-slate-800 dark:text-slate-200">${fmtInr(accData.invested)}</span>
-              </div>
-            </div>
+        const dayCol = accData.today >= 0 ? "text-emerald-500" : "text-rose-500";
+        topBadgesHtml += `
+          <div onclick="selectAccount('${accData.account}')" class="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition flex-shrink-0">
+            <span class="font-bold text-slate-400 text-[11px] flex items-center gap-1">
+              <span>${icon}</span>
+              <span>${accData.account}</span>
+            </span>
+            <strong class="font-mono font-bold text-slate-900 dark:text-white text-xs">${fmtInr(accData.current)}</strong>
+            <span class="font-mono font-bold text-[10px] ${dayCol}">(${accData.today >= 0 ? '+' : ''}${accData.todayPct.toFixed(2)}%)</span>
           </div>
         `;
     });
-    const top2Box = document.getElementById("top-two-accounts-container");
-    if (top2Box) top2Box.innerHTML = top2Html || `<div class="text-slate-400 text-xs py-2">No accounts found.</div>`;
+    const topBadgesContainer = document.getElementById("top-row-accounts-badges");
+    if (topBadgesContainer) topBadgesContainer.innerHTML = topBadgesHtml;
 
+    // Render All Accounts Grid
     let allCardsHtml = "";
     accountSummaries.forEach(acc => {
         const pnlCol = acc.pnl >= 0 ? "text-emerald-500" : "text-rose-500";
@@ -690,37 +719,38 @@ function renderConsolidatedCards() {
     renderGrowwMoverCards();
 }
 
+// Render Top 5 Gainers & Losers (Expanded 5-Column Cards)
 function renderGrowwMoverCards() {
     const gainersContainer = document.getElementById("groww-gainers-grid");
     const losersContainer = document.getElementById("groww-losers-grid");
 
     if (!computedData || computedData.length === 0) {
-        if (gainersContainer) gainersContainer.innerHTML = `<div class="col-span-4 text-slate-400 py-2">No stocks found.</div>`;
-        if (losersContainer) losersContainer.innerHTML = `<div class="col-span-4 text-slate-400 py-2">No stocks found.</div>`;
+        if (gainersContainer) gainersContainer.innerHTML = `<div class="col-span-5 text-slate-400 py-2">No stocks found.</div>`;
+        if (losersContainer) losersContainer.innerHTML = `<div class="col-span-5 text-slate-400 py-2">No stocks found.</div>`;
         return;
     }
 
     const sortedDesc = [...computedData].sort((a, b) => b.todayPct - a.todayPct);
-    const topGainers = sortedDesc.slice(0, 4);
-    const topLosers = [...computedData].sort((a, b) => a.todayPct - b.todayPct).slice(0, 4);
+    const topGainers = sortedDesc.slice(0, 5);
+    const topLosers = [...computedData].sort((a, b) => a.todayPct - b.todayPct).slice(0, 5);
 
     let gHtml = "";
     topGainers.forEach(s => {
         gHtml += `
-          <div onclick="selectAccount('${s.account}')" class="bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 cursor-pointer transition shadow-sm space-y-2 flex flex-col justify-between">
+          <div onclick="selectAccount('${s.account}')" class="bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-xl p-2 cursor-pointer transition shadow-sm space-y-1.5 flex flex-col justify-between">
             <div class="flex items-center justify-between">
               ${getStockAvatar(s.symbol)}
               <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-500 font-semibold">${s.account}</span>
             </div>
 
             <div>
-              <div class="font-bold text-slate-900 dark:text-white text-xs truncate">${s.symbol}</div>
-              <div class="text-[9.5px] text-slate-400">NSE • Equity</div>
+              <div class="font-bold text-slate-900 dark:text-white text-[11px] truncate">${s.symbol}</div>
+              <div class="text-[9px] text-slate-400">NSE • Equity</div>
             </div>
 
-            <div class="pt-1.5 border-t border-slate-200/50 dark:border-slate-800/60">
+            <div class="pt-1 border-t border-slate-200/50 dark:border-slate-800/60">
               <div class="font-extrabold text-xs font-mono text-slate-900 dark:text-white">₹${s.ltp.toFixed(2)}</div>
-              <div class="font-bold font-mono text-emerald-500 text-[10.5px] mt-0.5">
+              <div class="font-bold font-mono text-emerald-500 text-[10px] mt-0.5">
                 +${s.todayDiff.toFixed(2)} (+${s.todayPct.toFixed(2)}%)
               </div>
             </div>
@@ -732,20 +762,20 @@ function renderGrowwMoverCards() {
     let lHtml = "";
     topLosers.forEach(s => {
         lHtml += `
-          <div onclick="selectAccount('${s.account}')" class="bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 cursor-pointer transition shadow-sm space-y-2 flex flex-col justify-between">
+          <div onclick="selectAccount('${s.account}')" class="bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-xl p-2 cursor-pointer transition shadow-sm space-y-1.5 flex flex-col justify-between">
             <div class="flex items-center justify-between">
               ${getStockAvatar(s.symbol)}
               <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-500 font-semibold">${s.account}</span>
             </div>
 
             <div>
-              <div class="font-bold text-slate-900 dark:text-white text-xs truncate">${s.symbol}</div>
-              <div class="text-[9.5px] text-slate-400">NSE • Equity</div>
+              <div class="font-bold text-slate-900 dark:text-white text-[11px] truncate">${s.symbol}</div>
+              <div class="text-[9px] text-slate-400">NSE • Equity</div>
             </div>
 
-            <div class="pt-1.5 border-t border-slate-200/50 dark:border-slate-800/60">
+            <div class="pt-1 border-t border-slate-200/50 dark:border-slate-800/60">
               <div class="font-extrabold text-xs font-mono text-slate-900 dark:text-white">₹${s.ltp.toFixed(2)}</div>
-              <div class="font-bold font-mono text-rose-500 text-[10.5px] mt-0.5">
+              <div class="font-bold font-mono text-rose-500 text-[10px] mt-0.5">
                 ${s.todayDiff.toFixed(2)} (${s.todayPct.toFixed(2)}%)
               </div>
             </div>
@@ -753,6 +783,25 @@ function renderGrowwMoverCards() {
         `;
     });
     if (losersContainer) losersContainer.innerHTML = lHtml;
+}
+
+// -------------------------------------------------------------
+// WATCHLIST WITH ACCOUNT FILTER & SEARCH
+// -------------------------------------------------------------
+function populateWatchlistAccountFilter() {
+    const filterSelect = document.getElementById("watchlist-account-filter");
+    if (!filterSelect) return;
+    let optionsHtml = `<option value="ALL">All Accounts</option>`;
+    accounts.forEach(acc => {
+        optionsHtml += `<option value="${acc}">${acc}</option>`;
+    });
+    filterSelect.innerHTML = optionsHtml;
+    filterSelect.value = wlAccountFilter;
+}
+
+function handleWatchlistAccountFilter(val) {
+    wlAccountFilter = val;
+    renderWatchlistTable();
 }
 
 function handleWatchlistSearch(val) {
@@ -793,6 +842,14 @@ function renderWatchlistTable() {
 
     let deduplicatedList = Array.from(uniqueStockMap.values());
 
+    // Filter by Account Dropdown
+    if (wlAccountFilter !== "ALL") {
+        deduplicatedList = deduplicatedList.filter(item => 
+            item.accountList.includes(wlAccountFilter)
+        );
+    }
+
+    // Filter by Search Query
     if (wlSearchQuery) {
         deduplicatedList = deduplicatedList.filter(item => 
             item.symbol.toLowerCase().includes(wlSearchQuery) || 
@@ -801,8 +858,9 @@ function renderWatchlistTable() {
     }
 
     const counter = document.getElementById("watchlist-total-count");
-    if (counter) counter.innerText = `(${deduplicatedList.length} unique)`;
+    if (counter) counter.innerText = `(${deduplicatedList.length})`;
 
+    // Sort Watchlist
     deduplicatedList.sort((a, b) => {
         let valA = a[wlSortCol];
         let valB = b[wlSortCol];
@@ -834,7 +892,7 @@ function renderWatchlistTable() {
         html += `
           <tr onclick="selectAccount('${item.accountList[0]}')" class="hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition">
             <!-- Company / Symbol with Logo -->
-            <td class="py-2.5 px-3">
+            <td class="py-2 px-3">
               <div class="flex items-center gap-2.5">
                 ${getStockAvatar(item.symbol)}
                 <div>
@@ -848,33 +906,36 @@ function renderWatchlistTable() {
             </td>
 
             <!-- Market Price (LTP) -->
-            <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900 dark:text-white text-xs">
+            <td class="py-2 px-3 text-right font-mono font-bold text-slate-900 dark:text-white text-xs">
               ₹${item.ltp.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
 
             <!-- 1D Change (+/- and %) -->
-            <td class="py-2.5 px-3 text-right font-mono">
+            <td class="py-2 px-3 text-right font-mono">
               <div class="font-bold text-xs ${colorClass}">
                 ${diffSign}₹${Math.abs(item.todayDiff).toFixed(2)} (${sign}${item.todayPct.toFixed(2)}%)
               </div>
             </td>
 
             <!-- 1D Volume -->
-            <td class="py-2.5 px-3 text-right font-mono text-slate-600 dark:text-slate-300 text-xs">
+            <td class="py-2 px-3 text-right font-mono text-slate-600 dark:text-slate-300 text-xs">
               ${fmtVol(item.vol)}
             </td>
 
             <!-- 52W Performance Slider -->
-            <td class="py-2.5 px-3 text-center">
+            <td class="py-2 px-3 text-center">
               ${generate52WBar(item.ltp, item.low52, item.high52)}
             </td>
           </tr>
         `;
     });
 
-    tbody.innerHTML = html || `<tr><td colspan="5" class="text-center py-6 text-slate-400 font-sans">No matching stocks found in your watchlist.</td></tr>`;
+    tbody.innerHTML = html || `<tr><td colspan="5" class="text-center py-6 text-slate-400 font-sans">No matching stocks found.</td></tr>`;
 }
 
+// -------------------------------------------------------------
+// ACCOUNT HOLDINGS TABLE
+// -------------------------------------------------------------
 function renderDashboard() {
     const accountHoldings = computedData.filter(item => item.account === activeAccount);
 
@@ -962,42 +1023,6 @@ function renderDashboard() {
     const mContainer = document.getElementById("mobile-cards-container");
     if (bodyElem) bodyElem.innerHTML = desktopHtml || `<tr><td colspan="11" class="text-center py-6 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>.</td></tr>`;
     if (mContainer) mContainer.innerHTML = mobileHtml || `<div class="text-center py-6 text-slate-400 font-sans">No positions found for <strong>${activeAccount}</strong>.</div>`;
-}
-
-function updateKPIs(invested, current, prevClose) {
-    const totalPnl = current - invested;
-    const totalPct = invested > 0 ? (totalPnl / invested) * 100 : 0;
-    const todayPnl = current - prevClose;
-
-    const totalColor = totalPnl >= 0 ? 'text-emerald-500' : 'text-rose-500';
-    const todayColor = todayPnl >= 0 ? 'text-emerald-500' : 'text-rose-500';
-
-    const invElem = document.getElementById("kpi-invested");
-    const curElem = document.getElementById("kpi-current");
-    const totalElem = document.getElementById("kpi-total-pnl");
-    const totalPctElem = document.getElementById("kpi-total-pct");
-    const todayElem = document.getElementById("kpi-today-pnl");
-    const prevElem = document.getElementById("kpi-prev-close");
-
-    if (invElem) invElem.innerText = fmtInr(invested);
-    if (curElem) curElem.innerText = fmtInr(current);
-
-    if (totalElem) {
-        totalElem.innerText = `${totalPnl >= 0 ? '+' : ''}${fmtInr(totalPnl)}`;
-        totalElem.className = `text-sm font-extrabold text-right ${totalColor}`;
-    }
-
-    if (totalPctElem) {
-        totalPctElem.innerText = `${totalPct >= 0 ? '+' : ''}${totalPct.toFixed(2)}% overall`;
-        totalPctElem.className = `text-[10px] font-bold ${totalColor}`;
-    }
-
-    if (todayElem) {
-        todayElem.innerText = `${todayPnl >= 0 ? '+' : ''}${fmtInr(todayPnl)}`;
-        todayElem.className = `text-sm font-extrabold text-right ${todayColor}`;
-    }
-
-    if (prevElem) prevElem.innerText = `Prev: ${fmtInr(prevClose)}`;
 }
 
 function toggleAutoRefresh(start) {
